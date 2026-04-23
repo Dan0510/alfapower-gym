@@ -1,5 +1,5 @@
 const mysql = require("mysql2/promise");
-const { getSecret } = require("./gcpSecretManager");
+const { getSecret } = require("../gcp/gcpSecretManager");
 
 let pool;
 
