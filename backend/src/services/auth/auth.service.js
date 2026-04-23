@@ -9,7 +9,7 @@ const AuthModel = require('../../models/auth/auth.model');
 exports.login = async (req) => {
 
     const { username, password } = req.body;
-    
+    const db = await getConnectionDB();
 
     if (!username || !password) {
         throw new Error("Username and password required");
@@ -27,7 +27,6 @@ exports.login = async (req) => {
         throw new Error("Incorrect password");
     }
 
-    const db = await getConnectionDB();
 
     const token = jwt.sign(
         { id_user: user.id_user, username: user.username },
