@@ -8,7 +8,7 @@ const clientPools = new Map();
 async function getConnectionDB () {
   if (pool) return pool;
 
-  const secrets = await getSecret("alfapower-gym ");
+  const secrets = await getSecret("alfapower-gym");
 
   pool = mysql.createPool({
     host: secrets.host,
