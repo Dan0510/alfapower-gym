@@ -1,12 +1,15 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../../config/db/connection');
+const { getConnectionDB } = require("../../config/db/connection");
+//const db = require('../../config/db/connection');
+
 
 const AuthModel = require('../../models/auth/auth.model');
 
 exports.login = async (req) => {
 
     const { username, password } = req.body;
+    
 
     if (!username || !password) {
         throw new Error("Username and password required");
@@ -23,6 +26,8 @@ exports.login = async (req) => {
     if (!valid) {
         throw new Error("Incorrect password");
     }
+
+    const db = await getConnectionDB();
 
     const token = jwt.sign(
         { id_user: user.id_user, username: user.username },
