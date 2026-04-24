@@ -53,7 +53,8 @@ exports.createMember = async (req) => {
             WHERE id_membership_consecutive_number = ?
         `, [current, rows[0].id_membership_consecutive_number]);
 
-        const membership_number = `MBR-${String(current).padStart(6, '0')}`;
+        //const membership_number = `MBR-${String(current).padStart(6, '0')}`;
+        const membership_number = current;
 
         // =========================
         // 📸 FOTO
