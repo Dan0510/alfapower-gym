@@ -33,3 +33,65 @@ exports.createMember = async (db, data) => {
 
     return result;
 };
+
+exports.searchSmart = async (db, data) => {
+
+    let query = `
+        SELECT 
+            id_member,
+            membership_number,
+            CONCAT(first_name, ' ', first_surname, ' ', IFNULL(second_surname, '')) AS full_name
+        FROM tb_members
+        WHERE status = 1
+    `;
+
+    const params = [];
+
+    // 🔍 búsqueda inteligente
+    if (data.q) {
+        query += `
+            AND (
+                membership_number LIKE ?
+                OR first_name LIKE ?
+                OR first_surname LIKE ?
+                OR second_surname LIKE ?
+            )
+        `;
+
+        const search = `%${data.q}%`;
+
+        params.push(search, search, search, search);
+    }
+
+    // 🏢 filtro por sucursal
+    if (data.id_gym_branch) {
+        query += ` AND id_gym_branch = ? `;
+        params.push(data.id_gym_branch);
+    }
+
+    // 🚫 exclusión de socio
+    if (data.exclude_id_member) {
+        query += ` AND id_member != ? `;
+        params.push(data.exclude_id_member);
+    }
+
+    query += `
+        ORDER BY 
+            CASE 
+                WHEN membership_number = ? THEN 1
+                WHEN first_name LIKE ? THEN 2
+                ELSE 3
+            END,
+            first_name ASC
+        LIMIT 20
+    `;
+
+    const exact = data.q || '';
+    const like = `%${data.q || ''}%`;
+
+    params.push(exact, like);
+
+    const [rows] = await db.query(query, params);
+
+    return rows;
+};

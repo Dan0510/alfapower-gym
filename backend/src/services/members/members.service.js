@@ -171,3 +171,20 @@ exports.createMember = async (req) => {
         conn.release();
     }
 };
+
+exports.searchSmart = async (filters) => {
+
+    if (!filters.q || filters.q.trim().length < 2) {
+        return {
+            success: true,
+            data: []
+        };
+    }
+
+    const data = await MembersModel.searchSmart(db, filters);
+
+    return {
+        success: true,
+        data
+    };
+};

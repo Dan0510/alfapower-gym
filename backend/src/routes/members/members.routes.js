@@ -7,5 +7,6 @@ const MembersController = require('../../controllers/members/members.controller'
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/create', upload.single('photo'), MembersController.createMember);
+router.get('/search', MembersController.searchSmart);
 
 module.exports = router;
