@@ -1,6 +1,6 @@
 const { getConnectionDB } = require("../../config/db/connection");
 const MembersModel = require('../../models/members/members.model');
-const { bucket } = require('../../config/gcp/storage');
+const { getBucket  } = require('../../config/gcp/storage');
 const { sgMail, initMailer } = require('../../config/mail/mailer');
 
 const { v4: uuidv4 } = require('uuid');
