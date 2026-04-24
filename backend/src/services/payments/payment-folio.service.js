@@ -1,4 +1,4 @@
-const db = require('../../config/db/connection');
+const { getConnectionDB } = require("../../config/db/connection");
 
 function buildFolio(prefix, number, padding) {
     const padded = String(number).padStart(padding, '0');
@@ -9,6 +9,7 @@ function getCategoryFromMembership(membership) {
 
     const unit = membership.id_unit_measurement;
     const qty = membership.quantity_members;
+
 
     // VISIT
     if (qty === 1 && unit === 1) {
@@ -31,6 +32,8 @@ function getCategoryFromMembership(membership) {
 exports.getNextFolio = async (id_gym_branch, membership) => {
 
     const category = getCategoryFromMembership(membership);
+
+    const db = await getConnectionDB();
 
     const [rows] = await db.query(`
         SELECT 

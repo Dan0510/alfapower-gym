@@ -1,13 +1,13 @@
-const db = require('../../config/db/connection');
+const { getConnectionDB } = require("../../config/db/connection");
 const PaymentsModel = require('../../models/payments/payments.model');
 
 function generateFolio() {
-    return `PAY-${Date.now()}`;
+    return `PAGO-${Date.now()}`;
 }
 
 exports.createPayment = async (req) => {
 
-    const conn = await db.getConnection();
+    const conn = await getConnectionDB();
     await conn.beginTransaction();
 
     try {
