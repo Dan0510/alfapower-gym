@@ -1,5 +1,5 @@
 const sgMail = require('@sendgrid/mail');
-const { getSecret } = require('../gcpSecretManager');
+const { getSecret } = require('../../config/gcp/gcpSecretManager');
 
 let isInitialized = false;
   

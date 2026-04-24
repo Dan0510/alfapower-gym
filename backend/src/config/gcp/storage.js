@@ -1,5 +1,5 @@
 const { Storage } = require('@google-cloud/storage');
-const { getSecret } = require('../gcpSecretManager');
+const { getSecret } = require('../../config/gcp/gcpSecretManager');
 
 const storage = new Storage();
 

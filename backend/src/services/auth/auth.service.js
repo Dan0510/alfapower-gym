@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { getConnectionDB } = require("../../config/db/connection");
-const { getSecret } = require('../gcpSecretManager');
+const { getSecret } = require('../../config/gcp/gcpSecretManager');
 //const db = require('../../config/db/connection');
 
 
