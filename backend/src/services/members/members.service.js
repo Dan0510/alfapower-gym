@@ -174,6 +174,8 @@ exports.createMember = async (req) => {
 
 exports.searchSmart = async (filters) => {
 
+    const db = await getConnectionDB();
+
     if (!filters.q || filters.q.trim().length < 2) {
         return {
             success: true,
