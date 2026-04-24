@@ -4,7 +4,7 @@ const client = new SecretManagerServiceClient();
 
 async function getSecret(name, { parse = false } = {}) {
     const [version] = await client.accessSecretVersion({
-        name: `projects/PROJECT_ID/secrets/${name}/versions/latest`,
+        name: `projects/182411964865/secrets/${name}/versions/latest`,
     });
 
     const value = version.payload.data.toString();
