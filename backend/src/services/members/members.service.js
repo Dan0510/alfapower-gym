@@ -1,4 +1,4 @@
-const db = require('../../config/db/connection');
+const { getConnectionDB } = require("../../config/db/connection");
 const MembersModel = require('../../models/members/members.model');
 const { bucket } = require('../../config/gcp/storage');
 const transporter = require('../../config/mail/mailer');
@@ -9,7 +9,7 @@ const validator = require('validator');
 
 exports.createMember = async (req) => {
 
-    const conn = await db.getConnection();
+    const conn = await getConnectionDB();
     await conn.beginTransaction();
 
     try {
