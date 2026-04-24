@@ -9,6 +9,7 @@ exports.getAvailable = async (db, data) => {
             m.duration_value,
             m.id_unit_measurement,
             m.price,
+            m.quantity_members,
             m.access_limit_per_day,
             m.allow_freeze,
             m.max_freeze_days,
