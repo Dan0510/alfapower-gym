@@ -1,11 +1,20 @@
 const { Storage } = require('@google-cloud/storage');
+const { getSecret } = require('../gcpSecretManager');
 
 const storage = new Storage();
 
-const bucketName = process.env.GCP_BUCKET_NAME;
+let bucketInstance = null;
 
-const bucket = storage.bucket(bucketName);
+async function getBucket() {
+    if (bucketInstance) return bucketInstance;
+
+    const bucketName = await getSecret('GCP_BUCKET_NAME-alfapower-gym');
+
+    bucketInstance = storage.bucket(bucketName);
+
+    return bucketInstance;
+}
 
 module.exports = {
-    bucket
+    getBucket
 };

@@ -1,7 +1,7 @@
 const { getConnectionDB } = require("../../config/db/connection");
 const MembersModel = require('../../models/members/members.model');
 const { bucket } = require('../../config/gcp/storage');
-const sgMail = require('../../config/mail/mailer');
+const { sgMail, initMailer } = require('../../config/mail/mailer');
 
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
@@ -120,13 +120,19 @@ exports.createMember = async (req) => {
         // 📧 ENVIAR EMAIL
         // =========================
 
-        if (email && validator.isEmail(email)) {
+       if (email && validator.isEmail(email)) {
 
+        try {
+            // 1. QR URL
             const [url] = await qrFile.getSignedUrl({
                 action: 'read',
                 expires: Date.now() + 1000 * 60 * 60
             });
 
+            // 2. Inicializar mailer (ideal moverlo fuera del request)
+            await initMailer();
+
+            // 3. Enviar correo
             await sgMail.send({
                 to: email,
                 from: 'AlfaPower Gym <contacto@alfapowergym.com>',
@@ -138,6 +144,11 @@ exports.createMember = async (req) => {
                     <img src="${url}" width="200"/>
                 `
             });
+
+        } catch (err) {
+            console.error("Error enviando correo:", err.response?.body || err.message);
+            // NO rompas el registro del socio por correo fallido
+        }
         }
 
         await conn.commit();

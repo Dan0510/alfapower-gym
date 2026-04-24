@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { getConnectionDB } = require("../../config/db/connection");
+const { getSecret } = require('../gcpSecretManager');
 //const db = require('../../config/db/connection');
 
 
@@ -27,10 +28,11 @@ exports.login = async (req) => {
         throw new Error("Incorrect password");
     }
 
+    const JWT_SECRET = await getSecret('JWT_SECRET-alfapower-gym');
 
     const token = jwt.sign(
         { id_user: user.id_user, username: user.username },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '12h' }
     );
 
@@ -67,7 +69,7 @@ exports.validateToken = async (req) => {
 
     if (!token) throw new Error("Token required");
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     const session = await AuthModel.getActiveSession(db, token);
 

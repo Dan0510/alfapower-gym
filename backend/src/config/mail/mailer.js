@@ -1,5 +1,19 @@
 const sgMail = require('@sendgrid/mail');
+const { getSecret } = require('../gcpSecretManager');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+let isInitialized = false;
 
-module.exports = sgMail;
+async function initMailer() {
+    if (isInitialized) return;
+
+    const SENDGRID_API_KEY = await getSecret('SENDGRID_API_KEY-alfapower-gym');
+
+    sgMail.setApiKey(SENDGRID_API_KEY);
+
+    isInitialized = true;
+}
+
+module.exports = {
+    sgMail,
+    initMailer
+};
