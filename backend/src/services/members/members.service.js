@@ -9,8 +9,8 @@ const validator = require('validator');
 
 exports.createMember = async (req) => {
 
-    const conn = await getConnectionDB();
-    await conn.beginTransaction();
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
 
     try {
 
