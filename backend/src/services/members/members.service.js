@@ -1,7 +1,7 @@
 const { getConnectionDB } = require("../../config/db/connection");
 const MembersModel = require('../../models/members/members.model');
 const { bucket } = require('../../config/gcp/storage');
-const transporter = require('../../config/mail/mailer');
+const sgMail = require('../../config/mail/mailer');
 
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
@@ -127,9 +127,9 @@ exports.createMember = async (req) => {
                 expires: Date.now() + 1000 * 60 * 60
             });
 
-            await transporter.sendMail({
-                from: `"AlfaPower Gym" <contacto@alfapowergym.com>`,
+            await sgMail.send({
                 to: email,
+                from: 'AlfaPower Gym <contacto@alfapowergym.com>',
                 subject: 'Tu código de acceso',
                 html: `
                     <h2>Bienvenido a AlfaPower Gym</h2>
