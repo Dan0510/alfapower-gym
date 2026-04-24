@@ -22,7 +22,7 @@ exports.createMember = async (req) => {
             email,
             telephone,
             id_gender,
-            id_gym_branch
+            id_gym_branch = 1
         } = req.body;
 
         if (!first_name || !first_surname || !id_gym_branch) {
@@ -143,7 +143,7 @@ exports.createMember = async (req) => {
 
         return {
             success: true,
-            message: 'Member created',
+            message: 'Socio registrado',
             id_member: result.insertId,
             membership_number,
             photo_path: photoPath,
