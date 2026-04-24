@@ -30,7 +30,7 @@ exports.createMember = async (req) => {
         }
 
         // =========================
-        // 🔢 GENERAR CONSECUTIVO
+        // GENERAR CONSECUTIVO
         // =========================
 
         const [rows] = await conn.query(`

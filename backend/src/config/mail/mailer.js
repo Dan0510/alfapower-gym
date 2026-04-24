@@ -2,7 +2,7 @@ const sgMail = require('@sendgrid/mail');
 const { getSecret } = require('../gcpSecretManager');
 
 let isInitialized = false;
-
+  
 async function initMailer() {
     if (isInitialized) return;
 
