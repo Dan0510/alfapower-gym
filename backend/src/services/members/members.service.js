@@ -11,6 +11,7 @@ exports.createMember = async (req) => {
 
     const pool = await getConnectionDB();
     const conn = await pool.getConnection();
+    const bucket = await getBucket();
 
     try {
 
@@ -92,6 +93,7 @@ exports.createMember = async (req) => {
         const qrFileName = `${uuidv4()}.png`;
         const qrPath = `members/qr-codes/${qrFileName}`;
 
+        
         const qrFile = bucket.file(qrPath);
 
         await qrFile.save(qrBuffer, {
