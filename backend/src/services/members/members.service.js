@@ -162,7 +162,7 @@ exports.createMember = async (req) => {
             membership_number,
             photo_path: photoPath,
             qr_path: qrPath,
-            is_new: true
+            is_new: 1
         };
 
     } catch (error) {

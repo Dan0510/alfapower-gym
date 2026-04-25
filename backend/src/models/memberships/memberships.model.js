@@ -1,6 +1,6 @@
 exports.getAvailable = async (db, data) => {
 
-    const [rows] = await db.query(`
+   let query = `
         SELECT 
             m.id_membership,
             m.id_gym_branch,
@@ -26,12 +26,23 @@ exports.getAvailable = async (db, data) => {
           AND m.status = 1
           AND (m.valid_from IS NULL OR m.valid_from <= ?)
           AND (m.valid_to IS NULL OR m.valid_to >= ?)
-        ORDER BY m.price ASC
-    `, [
+        ORDER BY m.id_membership ASC
+    `;
+
+    const params = [
         data.id_gym_branch,
         data.today,
         data.today
-    ]);
+    ];
+
+     if (data.only_new_members !== undefined) {
+        query += ` AND only_new_members = ? `;
+        params.push(Number(data.only_new_members));
+    }
+
+    query += ` ORDER BY price ASC`;
+
+    const [rows] = await db.query(query, params);
 
     return rows;
 };

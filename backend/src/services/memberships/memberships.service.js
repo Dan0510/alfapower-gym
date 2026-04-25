@@ -1,14 +1,15 @@
 const { getConnectionDB } = require("../../config/db/connection");
 const MembershipsModel = require('../../models/memberships/memberships.model');
 
-exports.getAvailable = async (id_gym_branch) => {
+exports.getAvailable = async (filters) => {
 
     const today = new Date().toISOString().split('T')[0];
 
     const db = await getConnectionDB();
     
     const memberships = await MembershipsModel.getAvailable(db, {
-        id_gym_branch,
+        id_gym_branch: filters.id_gym_branch,
+        only_new_members: filters.only_new_members,
         today
     });
 
