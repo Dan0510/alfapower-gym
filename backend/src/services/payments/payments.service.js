@@ -97,6 +97,66 @@ exports.createPayment = async (req) => {
             ]);
         }
 
+        // 📅 OBTENER DURACIÓN DE MEMBRESÍA
+        const [[membership]] = await conn.query(`
+            SELECT 
+                m.duration_value,
+                u.value AS unit_days
+            FROM cat_memberships m
+            INNER JOIN cat_unit_measurement u
+                ON u.id_unit_measurement = m.id_unit_measurement
+            WHERE m.id_membership = ?
+        `, [id_membership]);
+
+        if (!membership) {
+            throw new Error('Membership not found');
+        }
+
+    // 🔢 cantidad de periodos (ej: 2 meses)
+    const quantity = req.body.quantity || 1;
+
+    // 🧮 total de días
+    const totalDays = membership.duration_value * membership.unit_days * quantity;
+
+    // 👥 ACTUALIZAR CADA SOCIO
+    for (const m of members) {
+
+        // 🔒 bloquear fila
+        const [[member]] = await conn.query(`
+            SELECT next_payment_date
+            FROM tb_members
+            WHERE id_member = ?
+            FOR UPDATE
+        `, [m.id_member]);
+
+        if (!member) {
+            throw new Error(`Member not found: ${m.id_member}`);
+        }
+
+        let baseDate;
+
+        if (!member.next_payment_date) {
+            // 🆕 socio nuevo
+            baseDate = new Date();
+        } else {
+            // 🔁 renovar (acumula)
+            baseDate = new Date(member.next_payment_date);
+        }
+
+        // ➕ sumar días
+        const newDate = new Date(baseDate);
+        newDate.setDate(newDate.getDate() + totalDays);
+
+        // 💾 actualizar
+        await conn.query(`
+            UPDATE tb_members
+            SET next_payment_date = ?
+            WHERE id_member = ?
+        `, [
+            newDate.toISOString().split('T')[0],
+            m.id_member
+        ]);
+    }
         await conn.commit();
 
         return {

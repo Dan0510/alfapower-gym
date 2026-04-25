@@ -161,7 +161,8 @@ exports.createMember = async (req) => {
             id_member: result.insertId,
             membership_number,
             photo_path: photoPath,
-            qr_path: qrPath
+            qr_path: qrPath,
+            is_new: true
         };
 
     } catch (error) {
