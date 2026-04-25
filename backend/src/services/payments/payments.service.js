@@ -1,5 +1,8 @@
 const { getConnectionDB } = require("../../config/db/connection");
 const PaymentsModel = require('../../models/payments/payments.model');
+const { generateReceiptPdf } = require('../../utils/generateReceiptPdf');
+const { uploadReceipt } = require('../../utils/uploadToStorage');
+const { sendReceiptEmail } = require('../../utils/sendEmail');
 
 function generateFolio() {
     return `PAGO-${Date.now()}`;
@@ -7,25 +10,33 @@ function generateFolio() {
 
 exports.createPayment = async (req) => {
 
-    const conn = await getConnectionDB();
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
     await conn.beginTransaction();
 
     try {
 
-        const {
+        let {
             id_membership,
             id_gym_branch,
             total_amount,
             discount_amount = 0,
             members = [],
             payment_methods = [],
-            notes
+            notes,
+            is_registration = 0,
+            registration_price = 0
         } = req.body;
 
         if (!members.length) {
             throw new Error('At least one member is required');
         }
 
+        if(is_registration){
+            discount_amount = discount_amount + registration_price;
+        }
+
+        
         const paidAmount = payment_methods.reduce((s, p) => s + Number(p.amount), 0);
 
         const pendingAmount = (total_amount - discount_amount) - paidAmount;
@@ -158,6 +169,60 @@ exports.createPayment = async (req) => {
         ]);
     }
         await conn.commit();
+
+        // 📧 obtener datos de socios
+        const [membersData] = await conn.query(`
+            SELECT email, first_name, first_surname
+            FROM tb_members
+            WHERE id_member IN (${members.map(() => '?').join(',')})
+        `, members.map(m => m.id_member));
+
+        const emails = membersData.map(m => m.email).filter(e => e);
+
+        // 👥 nombres
+        const membersNames = membersData
+            .map(m => `${m.first_name} ${m.first_surname}`)
+            .join(', ');
+
+        // 💳 métodos de pago (puedes mejorar esto con catálogo)
+        const paymentMethodsText = payment_methods
+            .map(p => `Método ${p.id_payment_method}`)
+            .join(' / ');
+
+        // 📅 usar última fecha calculada
+        const nextPaymentDate = new Date();
+        nextPaymentDate.setDate(nextPaymentDate.getDate() + totalDays);
+
+        // 🧾 generar PDF
+        const pdfBuffer = await generateReceiptPdf({
+            date: new Date().toLocaleDateString(),
+            total: total_amount,
+            discount: discount_amount,
+            members: membersNames,
+            concept: notes,
+            payment_methods: paymentMethodsText,
+            next_payment_date: nextPaymentDate.toISOString().split('T')[0],
+            status,
+            attended_by: 'Sistema',
+            folio: payment_folio
+        });
+
+        // ☁️ subir a bucket
+        const fileName = `${payment_folio}.pdf`;
+
+        const filePath = await uploadReceipt(pdfBuffer, fileName);
+
+        // 💾 guardar ruta en BD
+        await conn.query(`
+            UPDATE tb_member_payments
+            SET payment_receipt_path = ?
+            WHERE id_payment = ?
+        `, [filePath, id_payment]);
+
+        // 📧 enviar correo
+        if (emails.length) {
+            await sendReceiptEmail(emails, pdfBuffer, payment_folio);
+        }
 
         return {
             success: true,
