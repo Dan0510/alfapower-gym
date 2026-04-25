@@ -30,8 +30,8 @@ exports.generateReceiptPdf = (data) => {
         doc.text(`CONCEPTO: ${data.concept}`);
         doc.moveDown();
 
-        doc.text(`FORMA DE PAGO: ${data.payment_methods}`);
-        doc.text(`TIPO DE PAGO: ${data.status}`);
+        doc.text(`FORMA DE PAGO: ${data.payment_method_name}`);
+        doc.text(`TIPO DE PAGO: ${data.payment_type}`);
 
         doc.moveDown();
 
