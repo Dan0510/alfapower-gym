@@ -26,7 +26,7 @@ exports.getAvailable = async (db, data) => {
           AND m.status = 1
           AND (m.valid_from IS NULL OR m.valid_from <= ?)
           AND (m.valid_to IS NULL OR m.valid_to >= ?)
-        ORDER BY m.id_membership ASC
+        
     `;
 
     const params = [
@@ -40,7 +40,7 @@ exports.getAvailable = async (db, data) => {
         params.push(Number(data.only_new_members));
     }
 
-    query += ` ORDER BY price ASC`;
+    query += ` ORDER BY m.id_membership ASC`;
 
     const [rows] = await db.query(query, params);
 
