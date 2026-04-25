@@ -28,7 +28,8 @@ exports.createPayment = async (req) => {
             registration_price = 0,
             send_mail,
             payment_type,
-            payment_method_name
+            payment_method_name,
+            name
         } = req.body;
 
         if (!members.length) {
@@ -208,7 +209,7 @@ exports.createPayment = async (req) => {
                 payment_methods: paymentMethodsText,
                 next_payment_date: nextPaymentDate.toISOString().split('T')[0],
                 status,
-                attended_by: 'Sistema',
+                attended_by: name,
                 folio: payment_folio,
                 payment_method_name: payment_method_name,
                 payment_type: payment_type
