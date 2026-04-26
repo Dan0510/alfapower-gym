@@ -191,13 +191,17 @@ exports.createPayment = async (req) => {
                 .join(', ');
 
             // 💳 métodos de pago (puedes mejorar esto con catálogo)
-            const paymentMethodsText = payment_methods
+           /* const paymentMethodsText = payment_methods
                 .map(p => `Método ${p.id_payment_method}`)
-                .join(' / ');
+                .join(' / ');*/
 
             // 📅 usar última fecha calculada
             const nextPaymentDate = new Date();
             nextPaymentDate.setDate(nextPaymentDate.getDate() + totalDays);
+
+            const paymentMethodsText = payment_methods
+            .map(p => p.payment_method_name)
+            .join(' / ');
 
             // 🧾 generar PDF
             const pdfBuffer = await generateReceiptPdf({
@@ -211,7 +215,7 @@ exports.createPayment = async (req) => {
                 status,
                 attended_by: name,
                 folio: payment_folio,
-                payment_method_name: payment_method_name,
+                //payment_method_name: payment_method_name,
                 payment_type: payment_type
             });
 
