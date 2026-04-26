@@ -46,10 +46,10 @@ exports.createPayment = async (req) => {
         const pendingAmount = (total_amount - discount_amount) - paidAmount;
 
         const status =
-            pendingAmount <= 0 ? 'PAID' :
-            paidAmount > 0 ? 'PARTIAL' : 'PENDING';
+            pendingAmount <= 0 ? 'PAGADO' :
+            paidAmount > 0 ? 'PARCIAL' : 'PENDIENTE';
 
-        const payment_folio = `PAY-${Date.now()}`;
+        const payment_folio = `PAGO-${Date.now()}`;
 
         // 💰 CREAR PAGO
         const [result] = await conn.query(`
