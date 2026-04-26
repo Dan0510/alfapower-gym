@@ -41,7 +41,8 @@ exports.searchSmart = async (db, data) => {
             id_member,
             membership_number,
             CONCAT(first_name, ' ', first_surname, ' ', IFNULL(second_surname, '')) AS full_name,
-            IF(next_payment_date IS NULL, 1, 0) AS is_new
+            IF(next_payment_date IS NULL, 1, 0) AS is_new,
+            next_payment_date
         FROM tb_members
         WHERE status = 1
     `;
