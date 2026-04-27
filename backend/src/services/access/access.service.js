@@ -134,7 +134,7 @@ exports.validateQrAccess = async ({ id_member, id_gym_branch }) => {
     }
 };
 
-const { getConnectionDB } = require('../../config/db/connection');
+
 
 function calculateDaysRemaining(date) {
     if (!date) return null;
