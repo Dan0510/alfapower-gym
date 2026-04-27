@@ -1,4 +1,5 @@
 const { getConnectionDB } = require('../../config/db/connection');
+const { getBucket  } = require('../../config/gcp/storage');
 
 function calculateDaysRemaining(date) {
     if (!date) return null;
@@ -93,6 +94,11 @@ exports.validateQrAccess = async ({ id_member, id_gym_branch }) => {
                 membership_number,
                 CONCAT(first_name, ' ', first_surname, ' ', IFNULL(second_surname,'')) AS full_name,
                 next_payment_date,
+                 CASE 
+                    WHEN photo_path IS NOT NULL AND photo_path <> '' THEN 
+                        CONCAT('https://storage.googleapis.com/alfapower-gym/', photo_path)
+                    ELSE NULL
+                END AS photo_url,
                 status
             FROM tb_members
             WHERE id_member = ?
@@ -171,6 +177,7 @@ exports.registerAccess = async (data) => {
             SELECT 
                 id_member,
                 next_payment_date,
+                photo_path,
                 status
             FROM tb_members
             WHERE id_member = ?
@@ -255,14 +262,22 @@ exports.registerAccess = async (data) => {
             device_name || null
         ]);
 
+
+        const photo_url = member.photo_path
+            ? `https://storage.googleapis.com/alfapower-gym/${member.photo_path}`
+            : null;
+        
+
         return {
             success: true,
             access_granted: !!accessGranted,
             message: accessGranted ? 'Access granted' : deniedReason,
-            days_remaining: daysRemaining
+            days_remaining: daysRemaining,
+            photo_url: photo_url
         };
 
     } finally {
         conn.release();
     }
 };
+
