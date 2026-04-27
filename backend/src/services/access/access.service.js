@@ -49,7 +49,12 @@ exports.searchMember = async ({ search, id_gym_branch }) => {
                     id_member,
                     membership_number,
                     CONCAT(first_name, ' ', first_surname, ' ', IFNULL(second_surname,'')) AS full_name,
-                    next_payment_date
+                    next_payment_date,
+                     CASE 
+                    WHEN photo_path IS NOT NULL AND photo_path <> '' THEN 
+                        CONCAT('https://storage.googleapis.com/alfapower-gym/', photo_path)
+                    ELSE NULL
+                END AS photo_url
                 FROM tb_members
                 WHERE (
                     first_name LIKE ? OR
