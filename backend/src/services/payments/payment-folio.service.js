@@ -13,20 +13,20 @@ function getCategoryFromMembership(membership) {
 
     // VISIT
     if (qty === 1 && unit === 1) {
-        return 'VISIT';
+        return 'VISITA';
     }
 
     // WEEKLY
     if (unit === 2) {
-        return 'WEEKLY';
+        return 'SEMANA';
     }
 
     // MONTHLY (todo lo mensual)
     if (unit === 3) {
-        return 'MONTHLY';
+        return 'MENSUAL';
     }
 
-    return 'MONTHLY';
+    return 'MENSUAL';
 }
 
 exports.getNextFolio = async (id_gym_branch, membership) => {
