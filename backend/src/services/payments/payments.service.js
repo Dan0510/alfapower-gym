@@ -258,6 +258,7 @@ exports.createPayment = async (req) => {
 exports.getTodayPayments = async (req) => {
 
     const { id_gym_branch } = req.params;
+    const db = await getConnectionDB();
 
     const [rows] = await db.query(`
         SELECT 
@@ -308,6 +309,8 @@ exports.getTodayPayments = async (req) => {
 };
 
 exports.filterPayments = async (req) => {
+
+    const db = await getConnectionDB();
 
     const {
         id_gym_branch,
