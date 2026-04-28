@@ -35,3 +35,15 @@ exports.filterPayments = async (req, res) => {
         });
     }
 };
+
+exports.cancelPayment = async (req, res) => {
+    try {
+        const result = await PaymentsService.cancelPayment(req);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

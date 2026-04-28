@@ -4,6 +4,7 @@ const { generateReceiptPdf } = require('../../utils/generateReceiptPdf');
 const { uploadReceipt } = require('../../utils/uploadToStorage');
 const { sendReceiptEmail } = require('../../utils/sendEmail');
 
+
 function generateFolio() {
     return `PAGO-${Date.now()}`;
 }
@@ -29,7 +30,8 @@ exports.createPayment = async (req) => {
             send_mail,
             payment_type,
             payment_method_name,
-            name
+            name,
+            id_user
         } = req.body;
 
         if (!members.length) {
@@ -63,9 +65,10 @@ exports.createPayment = async (req) => {
                 pending_amount,
                 payment_status,
                 notes,
-                payment_date
+                payment_date,
+                created_by,
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
         `, [
             payment_folio,
             id_membership,
@@ -75,7 +78,8 @@ exports.createPayment = async (req) => {
             paidAmount,
             pendingAmount,
             status,
-            notes
+            notes,
+            id_user
         ]);
 
         const id_payment = result.insertId;
@@ -134,44 +138,99 @@ exports.createPayment = async (req) => {
     const totalDays = membership.duration_value * membership.unit_days * quantity;
 
     // 👥 ACTUALIZAR CADA SOCIO
-    for (const m of members) {
+for (const m of members) {
 
-        // 🔒 bloquear fila
-        const [[member]] = await conn.query(`
-            SELECT next_payment_date
-            FROM tb_members
-            WHERE id_member = ?
-            FOR UPDATE
-        `, [m.id_member]);
+    const [[member]] = await conn.query(`
+        SELECT next_payment_date, payment_day
+        FROM tb_members
+        WHERE id_member = ?
+        FOR UPDATE
+    `, [m.id_member]);
 
-        if (!member) {
-            throw new Error(`Member not found: ${m.id_member}`);
-        }
+    if (!member) {
+        throw new Error(`Member not found: ${m.id_member}`);
+    }
 
-        let baseDate;
+    let baseDate;
+    let isNewMember = !member.payment_day; // 👈 CLAVE
 
-        if (!member.next_payment_date) {
-            // 🆕 socio nuevo
-            baseDate = new Date();
-        } else {
-            // 🔁 renovar (acumula)
-            baseDate = new Date(member.next_payment_date);
-        }
+    if (!member.next_payment_date) {
+        baseDate = new Date();
+    } else {
+        baseDate = new Date(member.next_payment_date);
+    }
 
-        // ➕ sumar días
-        const newDate = new Date(baseDate);
-        newDate.setDate(newDate.getDate() + totalDays);
+    // ➕ nueva fecha
+    const newDate = new Date(baseDate);
+    newDate.setDate(newDate.getDate() + totalDays);
 
-        // 💾 actualizar
+    const formattedNewDate = newDate.toISOString().split('T')[0];
+
+    // 💾 ACTUALIZAR SOCIO
+    await conn.query(`
+        UPDATE tb_members
+        SET next_payment_date = ?
+        WHERE id_member = ?
+    `, [
+        formattedNewDate,
+        m.id_member
+    ]);
+
+    // 🧾 GUARDAR HISTORIAL (SOLO SI NO ES NUEVO)
+    if (!isNewMember) {
+
         await conn.query(`
-            UPDATE tb_members
-            SET next_payment_date = ?
-            WHERE id_member = ?
+            INSERT INTO tb_member_payment_history (
+                id_member,
+                id_payment,
+                previous_next_payment_date,
+                new_next_payment_date,
+                days_added,
+                id_membership,
+                movement_type,
+                created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            newDate.toISOString().split('T')[0],
-            m.id_member
+            m.id_member,
+            id_payment,
+            member.next_payment_date,
+            formattedNewDate,
+            totalDays,
+            id_membership,
+            'RENEWAL',
+            id_user
         ]);
     }
+
+    // 🆕 OPCIONAL: guardar primer registro si quieres trazabilidad completa
+    /*
+    else {
+        await conn.query(`
+            INSERT INTO tb_member_payment_history (
+                id_member,
+                id_payment,
+                previous_next_payment_date,
+                new_next_payment_date,
+                days_added,
+                id_membership,
+                movement_type,
+                created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            m.id_member,
+            id_payment,
+            null,
+            formattedNewDate,
+            totalDays,
+            id_membership,
+            'NEW',
+            id_user
+        ]);
+    }
+    */
+}
         await conn.commit();
 
         
@@ -216,7 +275,8 @@ exports.createPayment = async (req) => {
                 attended_by: name,
                 folio: payment_folio,
                 //payment_method_name: payment_method_name,
-                payment_type: payment_type
+                payment_type: payment_type,
+                 is_cancelled: false
             });
 
             // ☁️ subir a bucket
@@ -388,4 +448,132 @@ exports.filterPayments = async (req) => {
         success: true,
         data: rows
     };
+};
+
+
+exports.cancelPayment = async (req) => {
+
+    const { id_payment } = req.params;
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    try {
+
+        // 🔍 Obtener pago
+        const [[payment]] = await conn.query(`
+            SELECT *
+            FROM tb_member_payments
+            WHERE id_payment = ?
+            FOR UPDATE
+        `, [id_payment]);
+
+        if (!payment) {
+            throw new Error('Payment not found');
+        }
+
+        if (payment.payment_status === 'CANCELADO') {
+            throw new Error('Payment already cancelled');
+        }
+
+        // 👥 Obtener socios
+        const [members] = await conn.query(`
+            SELECT m.id_member, m.email, m.first_name, m.first_surname
+            FROM rel_payment_members rpm
+            INNER JOIN tb_members m ON m.id_member = rpm.id_member
+            WHERE rpm.id_payment = ?
+        `, [id_payment]);
+
+        // 🔄 Revertir fechas por cada socio
+        for (const m of members) {
+
+            const [[history]] = await conn.query(`
+                SELECT previous_next_payment_date
+                FROM tb_member_payment_history
+                WHERE id_member = ?
+                AND id_payment = ?
+                ORDER BY id_member_payment_history DESC
+                LIMIT 1
+            `, [m.id_member, id_payment]);
+
+            let newDate = null;
+
+            if (history) {
+                newDate = history.previous_next_payment_date;
+            }
+
+            await conn.query(`
+                UPDATE tb_members
+                SET next_payment_date = ?
+                WHERE id_member = ?
+            `, [
+                newDate,
+                m.id_member
+            ]);
+        }
+
+        // ❌ CANCELAR PAGO
+        await conn.query(`
+            UPDATE tb_member_payments
+            SET 
+                payment_status = 'CANCELADO',
+                payment_date = NOW()
+            WHERE id_payment = ?
+        `, [id_payment]);
+
+        // 🧾 GENERAR PDF CANCELADO
+
+        const membersNames = members
+            .map(m => `${m.first_name} ${m.first_surname}`)
+            .join(', ');
+
+        const pdfBuffer = await generateReceiptPdf({
+            date: new Date().toLocaleDateString(),
+            total: payment.total_amount,
+            discount: payment.discount_amount,
+            members: membersNames,
+            concept: payment.notes,
+            payment_methods: 'CANCELADO',
+            next_payment_date: '---',
+            status: 'CANCELADO',
+            attended_by: 'SYSTEM',
+            folio: payment.payment_folio,
+            payment_type: 'CANCELADO',
+             is_cancelled: true
+        });
+
+        // ☁️ SUBIR PDF
+        const fileName = `${payment.payment_folio}_CANCELLED.pdf`;
+
+        const filePath = await uploadReceipt(pdfBuffer, fileName);
+
+        // 💾 GUARDAR NUEVA RUTA
+        await conn.query(`
+            UPDATE tb_member_payments
+            SET payment_receipt_path = ?
+            WHERE id_payment = ?
+        `, [filePath, id_payment]);
+
+        await conn.commit();
+
+        // 📧 ENVIAR CORREO
+        const emails = members.map(m => m.email).filter(e => e);
+
+        if (emails.length) {
+            await sendReceiptEmail(emails, pdfBuffer, payment.payment_folio + ' CANCELADO');
+        }
+
+        return {
+            success: true,
+            message: 'Payment cancelled successfully',
+            id_payment
+        };
+
+    } catch (error) {
+        await conn.rollback();
+        throw error;
+    } finally {
+        conn.release();
+    }
 };
