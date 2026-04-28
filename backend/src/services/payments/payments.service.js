@@ -254,3 +254,135 @@ exports.createPayment = async (req) => {
         conn.release();
     }
 };
+
+exports.getTodayPayments = async (req) => {
+
+    const { id_gym_branch } = req.params;
+
+    const [rows] = await db.query(`
+        SELECT 
+            p.payment_folio,
+            GROUP_CONCAT(
+                CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
+                SEPARATOR ' / '
+            ) AS members,
+            p.total_amount,
+            p.discount_amount,
+            p.pending_amount,
+            p.paid_amount,
+            p.payment_date,
+
+            GROUP_CONCAT(DISTINCT pm.payment_method_name SEPARATOR ' / ') AS payment_methods,
+
+            u.name AS attended_by
+
+        FROM tb_member_payments p
+
+        LEFT JOIN rel_payment_members rpm 
+            ON rpm.id_payment = p.id_payment
+
+        LEFT JOIN tb_members m 
+            ON m.id_member = rpm.id_member
+
+        LEFT JOIN tb_payment_methods_detail pmd 
+            ON pmd.id_payment = p.id_payment
+
+        LEFT JOIN cat_payment_methods pm 
+            ON pm.id_payment_method = pmd.id_payment_method
+
+        LEFT JOIN z_users u 
+            ON u.id_user = p.created_by
+
+        WHERE p.id_gym_branch = ?
+        AND p.payment_date >= CURDATE()
+        AND p.payment_date < CURDATE() + INTERVAL 1 DAY
+
+        GROUP BY p.id_payment
+        ORDER BY p.payment_date DESC
+    `, [id_gym_branch]);
+
+    return {
+        success: true,
+        data: rows
+    };
+};
+
+exports.filterPayments = async (req) => {
+
+    const {
+        id_gym_branch,
+        folio,
+        member_name,
+        date,
+        payment_method
+    } = req.body;
+
+    let query = `
+        SELECT 
+            p.payment_folio,
+            GROUP_CONCAT(
+                CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
+                SEPARATOR ' / '
+            ) AS members,
+            p.total_amount,
+            p.discount_amount,
+            p.pending_amount,
+            p.paid_amount,
+            p.payment_date,
+
+            GROUP_CONCAT(DISTINCT pm.payment_method_name SEPARATOR ' / ') AS payment_methods,
+
+            u.name AS attended_by
+
+        FROM tb_member_payments p
+
+        LEFT JOIN rel_payment_members rpm ON rpm.id_payment = p.id_payment
+        LEFT JOIN tb_members m ON m.id_member = rpm.id_member
+        LEFT JOIN tb_payment_methods_detail pmd ON pmd.id_payment = p.id_payment
+        LEFT JOIN cat_payment_methods pm ON pm.id_payment_method = pmd.id_payment_method
+        LEFT JOIN z_users u ON u.id_user = p.created_by
+
+        WHERE p.id_gym_branch = ?
+    `;
+
+    const params = [id_gym_branch];
+
+    // 🔍 filtros dinámicos
+    if (folio) {
+        query += ` AND p.payment_folio LIKE ?`;
+        params.push(`%${folio}%`);
+    }
+
+    if (member_name) {
+        query += ` AND (
+            m.first_name LIKE ? OR 
+            m.first_surname LIKE ?
+        )`;
+        params.push(`%${member_name}%`, `%${member_name}%`);
+    }
+
+    if (date) {
+        query += `
+            AND p.payment_date >= ?
+            AND p.payment_date < DATE_ADD(?, INTERVAL 1 DAY)
+        `;
+        params.push(date, date);
+    }
+
+    if (payment_method) {
+        query += ` AND pm.id_payment_method = ?`;
+        params.push(payment_method);
+    }
+
+    query += `
+        GROUP BY p.id_payment
+        ORDER BY p.payment_date DESC
+    `;
+
+    const [rows] = await db.query(query, params);
+
+    return {
+        success: true,
+        data: rows
+    };
+};

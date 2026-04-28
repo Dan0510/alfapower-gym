@@ -231,12 +231,13 @@ exports.registerAccess = async (data) => {
                 INNER JOIN cat_access_types at 
                     ON at.id_access_type = al.id_access_type
                 WHERE al.id_member = ?
+                AND DATE(al.access_datetime) = CURDATE()
                 ORDER BY al.access_datetime DESC
                 LIMIT 1
             `, [id_member]);
 
             if (lastAccess && lastAccess.is_entry && !lastAccess.is_exit) {
-                accessGranted = 0;
+                accessGranted = 1;
                 deniedReason = 'Already inside';
             }
         }
