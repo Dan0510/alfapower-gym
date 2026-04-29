@@ -322,6 +322,7 @@ exports.getTodayPayments = async (req) => {
 
     const [rows] = await db.query(`
         SELECT 
+            p.id_payment,
             p.payment_folio,
             GROUP_CONCAT(
                 CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
@@ -382,6 +383,7 @@ exports.filterPayments = async (req) => {
 
     let query = `
         SELECT 
+            p.id_payment,
             p.payment_folio,
             GROUP_CONCAT(
                 CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
