@@ -359,7 +359,7 @@ exports.getTodayPayments = async (req) => {
         WHERE p.id_gym_branch = ?
         AND p.payment_date >= CURDATE()
         AND p.payment_date < CURDATE() + INTERVAL 1 DAY
-
+        AND p.payment_status !='CANCELADO'
         GROUP BY p.id_payment
         ORDER BY p.payment_date DESC
     `, [id_gym_branch]);
@@ -409,7 +409,7 @@ exports.filterPayments = async (req) => {
         LEFT JOIN cat_payment_methods pm ON pm.id_payment_method = pmd.id_payment_method
         LEFT JOIN z_users u ON u.id_user = p.created_by
 
-        WHERE p.id_gym_branch = ?
+        WHERE p.id_gym_branch = ?  AND p.payment_status !='CANCELADO'
     `;
 
     const params = [id_gym_branch];
