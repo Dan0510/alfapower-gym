@@ -636,7 +636,7 @@ exports.updatePayment = async (req) => {
         for (const m of oldMembers) {
 
             const [[history]] = await conn.query(`
-                SELECT previous_payment_date
+                SELECT previous_next_payment_date
                 FROM tb_member_payment_history
                 WHERE id_payment = ?
                 AND id_member = ?
@@ -649,7 +649,7 @@ exports.updatePayment = async (req) => {
                 SET next_payment_date = ?
                 WHERE id_member = ?
             `, [
-                history ? history.previous_payment_date : null,
+                history ? history.previous_next_payment_date : null,
                 m.id_member
             ]);
         }
@@ -781,7 +781,7 @@ exports.updatePayment = async (req) => {
                     INSERT INTO tb_member_payment_history (
                         id_member,
                         id_payment,
-                        previous_payment_date,
+                        previous_next_payment_date,
                         new_payment_date
                     )
                     VALUES (?, ?, ?, ?)
