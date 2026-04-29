@@ -333,7 +333,7 @@ exports.getTodayPayments = async (req) => {
             p.pending_amount,
             p.paid_amount,
             p.payment_date,
-
+            IF(DATEDIFF(NOW(), p.payment_date) <= 5, 1, 0) AS is_editing,
             GROUP_CONCAT(DISTINCT pm.payment_method_name SEPARATOR ' / ') AS payment_methods,
 
             u.name AS attended_by
@@ -394,7 +394,7 @@ exports.filterPayments = async (req) => {
             p.pending_amount,
             p.paid_amount,
             p.payment_date,
-
+            IF(DATEDIFF(NOW(), p.payment_date) <= 5, 1, 0) AS is_editing,
             GROUP_CONCAT(DISTINCT pm.payment_method_name SEPARATOR ' / ') AS payment_methods,
 
             u.name AS attended_by
@@ -570,6 +570,319 @@ exports.cancelPayment = async (req) => {
             success: true,
             message: 'Payment cancelled successfully',
             id_payment
+        };
+
+    } catch (error) {
+        await conn.rollback();
+        throw error;
+    } finally {
+        conn.release();
+    }
+};
+
+
+exports.updatePayment = async (req) => {
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+
+    await conn.beginTransaction();
+
+    try {
+
+        const {
+            id_payment,
+            id_membership,
+            total_amount,
+            discount_amount = 0,
+            members = [],
+            payment_methods = [],
+            notes,
+            id_user,
+            send_mail,
+            name,
+            payment_type
+        } = req.body;
+
+        if (!id_payment) throw new Error('id_payment is required');
+        if (!members.length) throw new Error('Members required');
+
+        // ===============================
+        // 1. Obtener pago original
+        // ===============================
+        const [[oldPayment]] = await conn.query(`
+            SELECT * FROM tb_member_payments
+            WHERE id_payment = ?
+        `, [id_payment]);
+
+        if (!oldPayment) throw new Error('Payment not found');
+
+        const payment_folio = oldPayment.payment_folio;
+
+        // ===============================
+        // 2. Obtener socios anteriores
+        // ===============================
+        const [oldMembers] = await conn.query(`
+            SELECT id_member
+            FROM rel_payment_members
+            WHERE id_payment = ?
+        `, [id_payment]);
+
+        // ===============================
+        // 3. REVERTIR FECHAS
+        // ===============================
+        for (const m of oldMembers) {
+
+            const [[history]] = await conn.query(`
+                SELECT previous_payment_date
+                FROM tb_member_payment_history
+                WHERE id_payment = ?
+                AND id_member = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            `, [id_payment, m.id_member]);
+
+            await conn.query(`
+                UPDATE tb_members
+                SET next_payment_date = ?
+                WHERE id_member = ?
+            `, [
+                history ? history.previous_payment_date : null,
+                m.id_member
+            ]);
+        }
+
+        // ===============================
+        // 4. Limpiar relaciones
+        // ===============================
+        await conn.query(`DELETE FROM rel_payment_members WHERE id_payment = ?`, [id_payment]);
+        await conn.query(`DELETE FROM tb_payment_methods_detail WHERE id_payment = ?`, [id_payment]);
+
+        // ===============================
+        // 5. Recalcular montos
+        // ===============================
+        const paidAmount = payment_methods.reduce((s, p) => s + Number(p.amount), 0);
+
+        const pendingAmount = (total_amount - discount_amount) - paidAmount;
+
+        const status =
+            pendingAmount <= 0 ? 'PAGADO' :
+            paidAmount > 0 ? 'PARCIAL' : 'PENDIENTE';
+
+        // ===============================
+        // 6. Actualizar pago
+        // ===============================
+        await conn.query(`
+            UPDATE tb_member_payments
+            SET
+                id_membership = ?,
+                total_amount = ?,
+                discount_amount = ?,
+                paid_amount = ?,
+                pending_amount = ?,
+                payment_status = ?,
+                notes = ?,
+                updated_at = NOW(),
+                updated_by = ?
+            WHERE id_payment = ?
+        `, [
+            id_membership,
+            total_amount,
+            discount_amount,
+            paidAmount,
+            pendingAmount,
+            status,
+            notes,
+            id_user,
+            id_payment
+        ]);
+
+        // ===============================
+        // 7. Insertar nuevos socios
+        // ===============================
+        for (const m of members) {
+            await conn.query(`
+                INSERT INTO rel_payment_members (id_payment, id_member)
+                VALUES (?, ?)
+            `, [id_payment, m.id_member]);
+        }
+
+        // ===============================
+        // 8. Métodos de pago
+        // ===============================
+        for (const p of payment_methods) {
+            await conn.query(`
+                INSERT INTO tb_payment_methods_detail (
+                    id_payment,
+                    id_payment_method,
+                    amount,
+                    reference
+                )
+                VALUES (?, ?, ?, ?)
+            `, [
+                id_payment,
+                p.id_payment_method,
+                p.amount,
+                p.reference || null
+            ]);
+        }
+
+        // ===============================
+        // 9. Obtener duración membresía
+        // ===============================
+        const [[membership]] = await conn.query(`
+            SELECT 
+                m.duration_value,
+                u.value AS unit_days
+            FROM cat_memberships m
+            JOIN cat_unit_measurement u
+                ON u.id_unit_measurement = m.id_unit_measurement
+            WHERE m.id_membership = ?
+        `, [id_membership]);
+
+        if (!membership) throw new Error('Membership not found');
+
+        const quantity = req.body.quantity || 1;
+        const totalDays = membership.duration_value * membership.unit_days * quantity;
+
+        // ===============================
+        // 10. Actualizar fechas nuevas + history
+        // ===============================
+        for (const m of members) {
+
+            const [[member]] = await conn.query(`
+                SELECT next_payment_date
+                FROM tb_members
+                WHERE id_member = ?
+                FOR UPDATE
+            `, [m.id_member]);
+
+            const previousDate = member.next_payment_date;
+
+            const baseDate = previousDate ? new Date(previousDate) : new Date();
+
+            const newDate = new Date(baseDate);
+            newDate.setDate(newDate.getDate() + totalDays);
+
+            const formattedDate = newDate.toISOString().split('T')[0];
+
+            // update member
+            await conn.query(`
+                UPDATE tb_members
+                SET next_payment_date = ?
+                WHERE id_member = ?
+            `, [formattedDate, m.id_member]);
+
+            // history
+            if (previousDate) {
+                await conn.query(`
+                    INSERT INTO tb_member_payment_history (
+                        id_member,
+                        id_payment,
+                        previous_payment_date,
+                        new_payment_date
+                    )
+                    VALUES (?, ?, ?, ?)
+                `, [
+                    m.id_member,
+                    id_payment,
+                    previousDate,
+                    formattedDate
+                ]);
+            }
+        }
+
+        // ===============================
+        // 11. LOG
+        // ===============================
+        /*await PaymentsModel.createLog(conn, {
+            id_payment,
+            action: 'UPDATE',
+            previous_status: oldPayment.payment_status,
+            new_status: status,
+            description: 'Actualización de pago',
+            created_by: id_user
+        });*/
+
+        await conn.query(`
+            INSERT INTO tb_payment_logs (
+                id_payment,
+                action,
+                previous_status,
+                new_status,
+                description,
+                created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [
+            id_payment,
+            'UPDATE',
+            oldPayment.payment_status,
+            status,
+            'Actualización de pago',
+            id_user
+        ]);
+
+        // ===============================
+        // 12. PDF + STORAGE + EMAIL
+        // ===============================
+        if (Number(send_mail) === 1) {
+
+            const [membersData] = await conn.query(`
+                SELECT email, first_name, first_surname
+                FROM tb_members
+                WHERE id_member IN (${members.map(() => '?').join(',')})
+            `, members.map(m => m.id_member));
+
+            const emails = membersData.map(m => m.email).filter(e => e);
+
+            const membersNames = membersData
+                .map(m => `${m.first_name} ${m.first_surname}`)
+                .join(', ');
+
+            const paymentMethodsText = payment_methods
+                .map(p => p.payment_method_name)
+                .join(' / ');
+
+            const nextPaymentDate = new Date();
+            nextPaymentDate.setDate(nextPaymentDate.getDate() + totalDays);
+
+            const pdfBuffer = await generateReceiptPdf({
+                date: new Date().toLocaleString(),
+                total: total_amount,
+                discount: discount_amount,
+                members: membersNames,
+                concept: notes,
+                payment_methods: paymentMethodsText,
+                next_payment_date: nextPaymentDate.toISOString().split('T')[0],
+                attended_by: name,
+                folio: payment_folio,
+                payment_type
+            });
+
+            const fileName = `${payment_folio}.pdf`;
+
+            const filePath = await uploadReceipt(pdfBuffer, fileName);
+
+            await conn.query(`
+                UPDATE tb_member_payments
+                SET payment_receipt_path = ?
+                WHERE id_payment = ?
+            `, [filePath, id_payment]);
+
+            if (emails.length) {
+                await sendReceiptEmail(emails, pdfBuffer, payment_folio);
+            }
+        }
+
+        await conn.commit();
+
+        return {
+            success: true,
+            message: 'Pago actualizado correctamente',
+            payment_folio,
+            id_payment,
+            status
         };
 
     } catch (error) {
