@@ -334,6 +334,7 @@ exports.getTodayPayments = async (req) => {
             p.paid_amount,
             p.payment_date,
             IF(DATEDIFF(NOW(), p.payment_date) <= 5, 1, 0) AS is_editing,
+            p.payment_status,
             GROUP_CONCAT(DISTINCT pm.payment_method_name SEPARATOR ' / ') AS payment_methods,
 
             u.name AS attended_by
@@ -395,6 +396,7 @@ exports.filterPayments = async (req) => {
             p.paid_amount,
             p.payment_date,
             IF(DATEDIFF(NOW(), p.payment_date) <= 5, 1, 0) AS is_editing,
+            p.payment_status,
             GROUP_CONCAT(DISTINCT pm.payment_method_name SEPARATOR ' / ') AS payment_methods,
 
             u.name AS attended_by
