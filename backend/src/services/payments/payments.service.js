@@ -325,7 +325,7 @@ exports.getTodayPayments = async (req) => {
             p.id_payment,
             p.payment_folio,
             GROUP_CONCAT(
-                CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
+                DISTINCT CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
                 SEPARATOR ' / '
             ) AS members,
             p.total_amount,
@@ -387,7 +387,7 @@ exports.filterPayments = async (req) => {
             p.id_payment,
             p.payment_folio,
             GROUP_CONCAT(
-                CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
+                DISTINCT CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
                 SEPARATOR ' / '
             ) AS members,
             p.total_amount,
