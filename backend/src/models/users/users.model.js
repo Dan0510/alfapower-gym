@@ -73,7 +73,8 @@ exports.updatePassword = async (db, id_user, password) => {
 
 exports.delete = async (db, id_user) => {
     const [result] = await db.query(`
-        DELETE FROM z_users
+        UPDATE z_users
+            SET status = 2
         WHERE id_user = ?
     `, [id_user]);
 
