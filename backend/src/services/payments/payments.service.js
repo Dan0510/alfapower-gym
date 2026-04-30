@@ -141,7 +141,7 @@ exports.createPayment = async (req) => {
 for (const m of members) {
 
     const [[member]] = await conn.query(`
-        SELECT next_payment_date, payment_day
+        SELECT next_payment_date
         FROM tb_members
         WHERE id_member = ?
         FOR UPDATE
@@ -152,7 +152,7 @@ for (const m of members) {
     }
 
     let baseDate;
-    let isNewMember = !member.payment_day; // 👈 CLAVE
+    let isNewMember = !member.next_payment_date; // 👈 CLAVE
 
     if (!member.next_payment_date) {
         baseDate = new Date();
