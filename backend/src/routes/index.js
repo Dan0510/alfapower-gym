@@ -9,6 +9,7 @@ router.use('/payments-methods', require('./payments/payments-methods.routes'));
 router.use('/payment-folio', require('./payments/payments-folio.routes'));
 router.use('/catalogs', require('./catalogs/unitMeasurement.routes'));
 router.use('/users', require('./users/users.routes'));
+router.use('/access', require('./access/access.routes'));
 
 
 module.exports = router;
