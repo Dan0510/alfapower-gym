@@ -13,7 +13,7 @@ exports.createPayment = async (db, data) => {
             notes,
             payment_date
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
         data.payment_folio,
         data.id_membership,
