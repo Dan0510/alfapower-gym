@@ -19,3 +19,42 @@ exports.getAvailable = async (req, res) => {
         });
     }
 };
+
+
+const MembershipsService = require('../../services/memberships/memberships.service');
+
+exports.create = async (req, res) => {
+    try {
+        const result = await MembershipsService.create(req);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+exports.update = async (req, res) => {
+    try {
+        const result = await MembershipsService.update(req);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+exports.delete = async (req, res) => {
+    try {
+        const result = await MembershipsService.delete(req);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+exports.getAll = async (req, res) => {
+    try {
+        const result = await MembershipsService.getAll(req);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
