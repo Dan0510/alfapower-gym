@@ -66,7 +66,7 @@ exports.createPayment = async (req) => {
                 payment_status,
                 notes,
                 payment_date,
-                created_by,
+                created_by
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
         `, [
