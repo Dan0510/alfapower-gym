@@ -3,7 +3,6 @@ exports.createPayment = async (db, data) => {
     const [result] = await db.query(`
         INSERT INTO tb_member_payments (
             payment_folio,
-            id_member,
             id_membership,
             id_gym_branch,
             total_amount,
@@ -17,7 +16,6 @@ exports.createPayment = async (db, data) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
         data.payment_folio,
-        data.id_member,
         data.id_membership,
         data.id_gym_branch,
         data.total_amount,
