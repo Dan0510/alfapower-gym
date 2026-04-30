@@ -21,8 +21,6 @@ exports.getAvailable = async (req, res) => {
 };
 
 
-const MembershipsService = require('../../services/memberships/memberships.service');
-
 exports.create = async (req, res) => {
     try {
         const result = await MembershipsService.create(req);
