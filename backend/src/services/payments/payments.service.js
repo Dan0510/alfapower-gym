@@ -9,6 +9,31 @@ function generateFolio() {
     return `PAGO-${Date.now()}`;
 }
 
+
+function getCategoryFromMembership(membership) {
+
+    const unit = membership.id_unit_measurement;
+    const qty = membership.quantity_members;
+
+
+    // VISIT
+    if (qty === 1 && unit === 1) {
+        return 'VISITA';
+    }
+
+    // WEEKLY
+    if (unit === 2) {
+        return 'SEMANA';
+    }
+
+    // MONTHLY (todo lo mensual)
+    if (unit === 3) {
+        return 'MENSUAL';
+    }
+
+    return 'MENSUAL';
+}
+
 exports.createPayment = async (req) => {
 
     const pool = await getConnectionDB();
@@ -31,7 +56,8 @@ exports.createPayment = async (req) => {
             payment_type,
             payment_method_name,
             name,
-            id_user
+            id_user,
+            folio
         } = req.body;
 
         if (!members.length) {
@@ -66,9 +92,10 @@ exports.createPayment = async (req) => {
                 payment_status,
                 notes,
                 payment_date,
+                invoice,
                 created_by
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
         `, [
             payment_folio,
             id_membership,
@@ -79,10 +106,48 @@ exports.createPayment = async (req) => {
             pendingAmount,
             status,
             notes,
+            folio,
             id_user
         ]);
 
         const id_payment = result.insertId;
+
+        const [[membershipData]] = await conn.query(`
+            SELECT 
+                id_unit_measurement,
+                quantity_members
+            FROM cat_memberships
+            WHERE id_membership = ?
+        `, [id_membership]);
+
+        if (!membershipData) {
+            throw new Error('Membership not found');
+        }
+
+        // usar datos
+        //const { id_unit_measurement, quantity_members } = membershipData;
+
+        const category = getCategoryFromMembership(membershipData);
+
+        const [rowsFolio] = await conn.query(`
+            SELECT *
+            FROM config_payment_folio_consecutive
+            WHERE id_gym_branch = ?
+            AND folio_category = ?
+            FOR UPDATE
+        `, [id_gym_branch, category]);
+
+    if (!rowsFolio.length) {
+        throw new Error('Folio category not configured');
+    }
+
+    const configFolio = rowsFolio[0];
+
+        await conn.query(`
+        UPDATE config_payment_folio_consecutive
+        SET current_number = ?, updated_at = NOW()
+        WHERE id_payment_folio_consecutive = ?
+    `, [folio, configFolio.id_payment_folio_consecutive]);
 
         // 👥 RELACIÓN CON SOCIOS
         for (const m of members) {
@@ -894,3 +959,4 @@ exports.updatePayment = async (req) => {
         conn.release();
     }
 };
+

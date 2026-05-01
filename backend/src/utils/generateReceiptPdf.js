@@ -1,9 +1,8 @@
 const PDFDocument = require('pdfkit');
-const fetch = require('node-fetch'); // si usas URL para logo
+const fetch = require('node-fetch');
 
-
-async function getLogoBuffer(logoUrl) {
-    const res = await fetch(logoUrl);
+async function getLogoBuffer(url) {
+    const res = await fetch(url);
     return await res.buffer();
 }
 
@@ -12,165 +11,151 @@ exports.generateReceiptPdf = async (data) => {
     return new Promise(async (resolve) => {
 
         const doc = new PDFDocument({ size: 'A4', margin: 40 });
-
         const buffers = [];
+
         doc.on('data', buffers.push.bind(buffers));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-        // ===============================
-        // 🎨 COLORES (AlfaPower)
-        // ===============================
-        const turquoise = '#00E0FF';
-        const fuchsia = '#FF00FF';
-        const dark = '#121212';
+        // 🎨 COLORES
+        const primary = '#1f2a44';
+        const red = '#d32f2f';
+        const gray = '#888';
 
         // ===============================
         // 🖼️ LOGO
         // ===============================
         try {
-            if (data.logo_url) {
-                const logoBuffer = await getLogoBuffer("https://storage.googleapis.com/alfapower-gym/logo_alfapower_transparent.png");
-                doc.image(logoBuffer, 40, 30, { width: 80 });
-            }
-        } catch (e) {
-            console.log('No se pudo cargar logo');
-        }
+            const logo = await getLogoBuffer(
+                'https://storage.googleapis.com/alfapower-gym/logo_alfapower_transparent.png'
+            );
+            doc.image(logo, 40, 40, { width: 90 });
+        } catch (e) {}
 
         // ===============================
-        // 🏋️ HEADER
+        // 🧾 TÍTULO (DERECHA)
         // ===============================
         doc
-            .fillColor(turquoise)
             .fontSize(20)
-            .text('ALFA POWER GYM', 130, 40);
-
-        doc
-            .fillColor('black')
-            .fontSize(12)
-            .text('RECIBO DE PAGO', 130);
-
-        doc.moveDown(2);
-
-        // Línea
-        doc
-            .moveTo(40, doc.y)
-            .lineTo(550, doc.y)
-            .strokeColor(turquoise)
-            .lineWidth(2)
-            .stroke();
-
-        doc.moveDown();
+            .fillColor(primary)
+            .text('RECIBO DE PAGO', 300, 40, { align: 'right' });
 
         // ===============================
-        // 📅 INFO
+        // 💰 RESUMEN DERECHA
         // ===============================
-        doc.fontSize(10).fillColor('black');
+        const rightX = 300;
+        let y = 80;
 
-        doc.text(`FECHA: ${data.date}`);
-        doc.text(`FOLIO: ${data.folio}`);
+        doc.fontSize(11).fillColor('black');
 
-        doc.moveDown();
-
-        // ===============================
-        // 👤 CLIENTE
-        // ===============================
-        doc
-            .fillColor(fuchsia)
-            .text('SOCIO(S):', { continued: true })
-            .fillColor('black')
-            .text(` ${data.members}`);
-
-        doc.moveDown();
-
-        // ===============================
-        // 📦 CONCEPTO
-        // ===============================
-        doc
-            .fillColor(fuchsia)
-            .text('CONCEPTO:', { continued: true })
-            .fillColor('black')
-            .text(` ${data.concept}`);
-
-        doc.moveDown();
-
-        // ===============================
-        // 💳 PAGOS
-        // ===============================
-        doc.text(`FORMA DE PAGO: ${data.payment_methods}`);
-        doc.text(`TIPO DE PAGO: ${data.payment_type}`);
-
-        doc.moveDown();
-
-        // ===============================
-        // 💰 CAJA DE TOTALES
-        // ===============================
-        const boxTop = doc.y;
-
-        doc
-            .roundedRect(40, boxTop, 510, 80, 10)
-            .strokeColor(turquoise)
-            .stroke();
-
-        doc.fontSize(11);
-
-        doc.text(`TOTAL: $${data.total}`, 60, boxTop + 15);
-        doc.text(`DESCUENTO: $${data.discount}`, 60, boxTop + 35);
+        doc.text(`FECHA: ${data.date}`, rightX, y, { align: 'right' });
+        y += 15;
+        doc.text(`TOTAL $: ${data.total}`, rightX, y, { align: 'right' });
+        y += 15;
+        doc.text(`DESCUENTO $: ${data.discount}`, rightX, y, { align: 'right' });
+        y += 15;
 
         const net = Number(data.total) - Number(data.discount);
 
         doc
-            .fillColor(fuchsia)
-            .text(`TOTAL PAGADO: $${net}`, 300, boxTop + 25);
+            .fillColor(primary)
+            .text(`BUENO POR $: ${net}`, rightX, y, { align: 'right' });
 
         doc.fillColor('black');
 
-        doc.moveDown(5);
+        // ===============================
+        // 🧍 DATOS
+        // ===============================
+        let startY = 160;
+
+        const label = (text, x, y) => {
+            doc.font('Helvetica-Bold').text(text, x, y);
+        };
+
+        const value = (text, x, y) => {
+            doc.font('Helvetica').text(text, x, y);
+        };
+
+        // RECIBI DE
+        label('RECIBÍ DE:', 40, startY);
+        value(` ${data.members}`, 140, startY);
+
+        startY += 25;
+
+        // CONCEPTO
+        label('POR CONCEPTO DE:', 40, startY);
+        value(` ${data.concept}`, 180, startY);
+
+        startY += 25;
+
+        // FORMA PAGO + TIPO
+        label('FORMA DE PAGO:', 40, startY);
+        value(` ${data.payment_methods}`, 160, startY);
+
+        label('TIPO DE PAGO:', 350, startY);
+        value(` ${data.payment_type}`, 480, startY);
+
+        startY += 25;
+
+        // PRÓXIMA FECHA
+        label('PRÓXIMA FECHA DE PAGO:', 40, startY);
+
+        doc
+            .fillColor(red)
+            .font('Helvetica-Bold')
+            .text(` ${data.next_payment_date}`, 260, startY);
+
+        doc.fillColor('black').font('Helvetica');
+
+        startY += 25;
+
+        // ATENDIÓ
+        label('ATENDIÓ:', 40, startY);
+        value(` ${data.attended_by}`, 120, startY);
 
         // ===============================
-        // 📅 PRÓXIMO PAGO
+        // 🔻 LÍNEA
         // ===============================
         doc
-            .fillColor('red')
-            .text(`PRÓXIMA FECHA DE PAGO: ${data.next_payment_date}`);
-
-        doc.fillColor('black');
-
-        doc.moveDown();
+            .moveTo(40, startY + 40)
+            .lineTo(550, startY + 40)
+            .strokeColor('#ccc')
+            .stroke();
 
         // ===============================
-        // 👨‍💼 ATENDIÓ
+        // 📍 FOOTER IZQUIERDA
         // ===============================
-        doc.text(`ATENDIÓ: ${data.attended_by}`);
+        doc
+            .fontSize(9)
+            .fillColor(gray)
+            .text('PASEO DE LA ESTANCIA NO. 501 11', 40, startY + 50);
 
-        doc.moveDown(3);
+        doc.text('LOCAL 6 PLANTA ALTA', 40, startY + 65);
+
+        // ===============================
+        // 🔢 FOLIO DERECHA
+        // ===============================
+        doc
+            .fontSize(12)
+            .fillColor(primary)
+            .text(`FOLIO ${data.folio}`, 350, startY + 55, {
+                align: 'right'
+            });
 
         // ===============================
         // ❌ CANCELADO
         // ===============================
         if (data.is_cancelled) {
             doc
-                .fontSize(50)
+                .fontSize(60)
                 .fillColor('red')
                 .rotate(-20, { origin: [300, 400] })
-                .text('CANCELADO', 100, 350, {
+                .text('CANCELADO', 100, 300, {
                     align: 'center',
                     width: 400
                 });
 
             doc.rotate(20, { origin: [300, 400] });
-            doc.fillColor('black');
         }
-
-        // ===============================
-        // 🔚 FOOTER
-        // ===============================
-        doc
-            .fontSize(9)
-            .fillColor('gray')
-            .text('Gracias por entrenar en AlfaPower 💪', 40, 780, {
-                align: 'center',
-                width: 510
-            });
 
         doc.end();
     });
