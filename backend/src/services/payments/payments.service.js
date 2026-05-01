@@ -185,7 +185,8 @@ exports.createPayment = async (req) => {
         const [[membership]] = await conn.query(`
             SELECT 
                 m.duration_value,
-                u.value AS unit_days
+                u.value AS unit_days,
+                m.membership_name
             FROM cat_memberships m
             INNER JOIN cat_unit_measurement u
                 ON u.id_unit_measurement = m.id_unit_measurement
@@ -201,6 +202,7 @@ exports.createPayment = async (req) => {
 
     // 🧮 total de días
     const totalDays = membership.duration_value * membership.unit_days * quantity;
+    const membership_name = membership.membership_name;
 
     // 👥 ACTUALIZAR CADA SOCIO
 for (const m of members) {
@@ -333,12 +335,12 @@ for (const m of members) {
                 total: total_amount,
                 discount: discount_amount,
                 members: membersNames,
-                concept: notes,
+                concept: membership_name,
                 payment_methods: paymentMethodsText,
                 next_payment_date: nextPaymentDate.toISOString().split('T')[0],
                 status,
                 attended_by: name,
-                folio: payment_folio,
+                folio: folio,
                 //payment_method_name: payment_method_name,
                 payment_type: payment_type,
                  is_cancelled: false
@@ -597,17 +599,30 @@ exports.cancelPayment = async (req) => {
             .map(m => `${m.first_name} ${m.first_surname}`)
             .join(', ');
 
+        const [[membership]] = await conn.query(`
+            SELECT 
+                membership_name
+            FROM cat_memberships m
+            JOIN cat_unit_measurement u
+                ON u.id_unit_measurement = m.id_unit_measurement
+            WHERE m.id_membership = ?
+        `, [payment.id_membership]);
+
+        if (!membership) throw new Error('Membership not found');
+
+        const membership_name = membership.membership_name;
+
         const pdfBuffer = await generateReceiptPdf({
             date: new Date().toLocaleDateString(),
             total: payment.total_amount,
             discount: payment.discount_amount,
             members: membersNames,
-            concept: payment.notes,
+            concept:membership_name,
             payment_methods: 'CANCELADO',
             next_payment_date: '---',
             status: 'CANCELADO',
             attended_by: 'SYSTEM',
-            folio: payment.payment_folio,
+            folio: payment.invoice,
             payment_type: 'CANCELADO',
              is_cancelled: true
         });
@@ -685,6 +700,7 @@ exports.updatePayment = async (req) => {
         if (!oldPayment) throw new Error('Payment not found');
 
         const payment_folio = oldPayment.payment_folio;
+        const invoice = oldPayment.invoice;
 
         // ===============================
         // 2. Obtener socios anteriores
@@ -800,7 +816,8 @@ exports.updatePayment = async (req) => {
         const [[membership]] = await conn.query(`
             SELECT 
                 m.duration_value,
-                u.value AS unit_days
+                u.value AS unit_days,
+                membership_name
             FROM cat_memberships m
             JOIN cat_unit_measurement u
                 ON u.id_unit_measurement = m.id_unit_measurement
@@ -811,6 +828,7 @@ exports.updatePayment = async (req) => {
 
         const quantity = req.body.quantity || 1;
         const totalDays = membership.duration_value * membership.unit_days * quantity;
+        const membership_name = membership.membership_name;
 
         // ===============================
         // 10. Actualizar fechas nuevas + history
@@ -919,11 +937,11 @@ exports.updatePayment = async (req) => {
                 total: total_amount,
                 discount: discount_amount,
                 members: membersNames,
-                concept: notes,
+                concept: membership_name,
                 payment_methods: paymentMethodsText,
                 next_payment_date: nextPaymentDate.toISOString().split('T')[0],
                 attended_by: name,
-                folio: payment_folio,
+                folio: invoice,
                 payment_type
             });
 
