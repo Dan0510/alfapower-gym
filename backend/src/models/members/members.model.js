@@ -107,9 +107,9 @@ exports.getAll = async (db, id_gym_branch) => {
             id_member,
             membership_number,
             CONCAT(tb_members.first_name, ' ', tb_members.first_surname, ' ', IFNULL(tb_members.second_surname, '')) AS full_name,
-            email,
-            telephone,
-            CONCAT('https://storage.googleapis.com/alfapower-gym/', photo_path) AS photo_url,
+            tb_members.email,
+            tb_members.telephone,
+            CONCAT('https://storage.googleapis.com/alfapower-gym/', tb_members.photo_path) AS photo_url,
             next_payment_date,
             tb_members.status,
             z_users.name AS created_by
