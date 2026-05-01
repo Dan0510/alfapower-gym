@@ -205,6 +205,7 @@ exports.createPayment = async (req) => {
     const membership_name = membership.membership_name;
 
     // 👥 ACTUALIZAR CADA SOCIO
+    let nextPaymentDate = "";
 for (const m of members) {
 
     const [[member]] = await conn.query(`
@@ -232,7 +233,10 @@ for (const m of members) {
     newDate.setDate(newDate.getDate() + totalDays);
 
     const formattedNewDate = newDate.toISOString().split('T')[0];
-
+    nextPaymentDate = [nextPaymentDate, formattedNewDate]
+    .filter(Boolean)
+    .join(' / ');
+    
     // 💾 ACTUALIZAR SOCIO
     await conn.query(`
         UPDATE tb_members
@@ -322,8 +326,8 @@ for (const m of members) {
                 .join(' / ');*/
 
             // 📅 usar última fecha calculada
-            const nextPaymentDate = new Date();
-            nextPaymentDate.setDate(nextPaymentDate.getDate() + totalDays);
+            /*const nextPaymentDate = new Date();
+            nextPaymentDate.setDate(nextPaymentDate.getDate() + totalDays);*/
 
             const paymentMethodsText = payment_methods
             .map(p => p.payment_method_name)
@@ -337,7 +341,7 @@ for (const m of members) {
                 members: membersNames,
                 concept: membership_name,
                 payment_methods: paymentMethodsText,
-                next_payment_date: nextPaymentDate.toISOString().split('T')[0],
+                next_payment_date: nextPaymentDate,
                 status,
                 attended_by: name,
                 folio: folio,
