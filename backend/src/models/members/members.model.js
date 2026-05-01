@@ -116,8 +116,8 @@ exports.getAll = async (db, id_gym_branch) => {
         FROM tb_members
             INNER JOIN z_users
                 ON z_users.id_user = tb_members.created_by
-        WHERE id_gym_branch = ?
-        AND status = 1
+        WHERE tb_members.id_gym_branch = ?
+        AND tb_members.status != 2
         ORDER BY id_member DESC
     `, [id_gym_branch]);
 
