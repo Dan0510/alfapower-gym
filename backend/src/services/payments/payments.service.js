@@ -304,7 +304,7 @@ for (const m of members) {
         if (Number(send_mail) === 1) {
             // 📧 obtener datos de socios
             const [membersData] = await conn.query(`
-                SELECT email, first_name, first_surname
+                SELECT email, first_name, first_surname, membership_number
                 FROM tb_members
                 WHERE id_member IN (${members.map(() => '?').join(',')})
             `, members.map(m => m.id_member));
@@ -313,8 +313,8 @@ for (const m of members) {
 
             // 👥 nombres
             const membersNames = membersData
-                .map(m => `${m.first_name} ${m.first_surname}`)
-                .join(', ');
+            .map(m => `#${m.membership_number} ${m.first_name} ${m.first_surname}`)
+            .join(', ');
 
             // 💳 métodos de pago (puedes mejorar esto con catálogo)
            /* const paymentMethodsText = payment_methods

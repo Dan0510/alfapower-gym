@@ -3,6 +3,11 @@ const fetch = require('node-fetch');
 
 async function getLogoBuffer(url) {
     const res = await fetch(url);
+
+    if (!res.ok) {
+        throw new Error(`Error al cargar logo: ${res.status}`);
+    }
+
     return await res.buffer();
 }
 
@@ -28,8 +33,12 @@ exports.generateReceiptPdf = async (data) => {
             const logo = await getLogoBuffer(
                 'https://storage.googleapis.com/alfapower-gym/logo_alfapower_transparent.png'
             );
+
             doc.image(logo, 40, 40, { width: 90 });
-        } catch (e) {}
+
+        } catch (e) {
+            console.log('Error cargando logo:', e.message);
+        }
 
         // ===============================
         // 🧾 TÍTULO (DERECHA)
