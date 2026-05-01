@@ -14,9 +14,10 @@ exports.createMember = async (db, data) => {
             photo_path,
             qr_code,
             registration_date,
-            status
+            status,
+            created_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 1)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 1, ?)
     `, [
         data.membership_number,
         data.first_name,
@@ -28,7 +29,8 @@ exports.createMember = async (db, data) => {
         data.id_gender,
         data.id_gym_branch,
         data.photo_path,
-        data.qr_code
+        data.qr_code,
+        data.id_user
     ]);
 
     return result;
@@ -96,4 +98,74 @@ exports.searchSmart = async (db, data) => {
     const [rows] = await db.query(query, params);
 
     return rows;
+};
+
+exports.getAll = async (db, id_gym_branch) => {
+
+    const [rows] = await db.query(`
+        SELECT 
+            id_member,
+            membership_number,
+            CONCAT(tb_members.first_name, ' ', tb_members.first_surname, ' ', IFNULL(tb_members.second_surname, '')) AS full_name,
+            email,
+            telephone,
+            CONCAT('https://storage.googleapis.com/alfapower-gym/', photo_path) AS photo_url,
+            next_payment_date,
+            tb_members.status,
+            z_users.name AS created_by
+        FROM tb_members
+            INNER JOIN z_users
+                ON z_users.id_user = tb_members.created_by
+        WHERE id_gym_branch = ?
+        AND status = 1
+        ORDER BY id_member DESC
+    `, [id_gym_branch]);
+
+    return rows;
+};
+
+exports.updateMember = async (db, data) => {
+
+    let query = `
+        UPDATE tb_members
+        SET 
+            first_name = ?,
+            first_surname = ?,
+            second_surname = ?,
+            birth_date = ?,
+            email = ?,
+            telephone = ?,
+            id_gender = ?
+    `;
+
+    const params = [
+        data.first_name,
+        data.first_surname,
+        data.second_surname,
+        data.birth_date,
+        data.email,
+        data.telephone,
+        data.id_gender
+    ];
+
+    // 📸 solo si viene foto
+    if (data.photo_path) {
+        query += `, photo_path = ?`;
+        params.push(data.photo_path);
+    }
+
+    query += ` WHERE id_member = ?`;
+
+    params.push(data.id_member);
+
+    await db.query(query, params);
+};
+
+exports.deleteMember = async (db, id_member) => {
+
+    await db.query(`
+        UPDATE tb_members
+        SET status = 2
+        WHERE id_member = ?
+    `, [id_member]);
 };

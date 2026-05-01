@@ -23,7 +23,8 @@ exports.createMember = async (req) => {
             email,
             telephone,
             id_gender,
-            id_gym_branch = 1
+            id_gym_branch = 1,
+            id_user
         } = req.body;
 
         if (!first_name || !first_surname || !id_gym_branch) {
@@ -115,7 +116,8 @@ exports.createMember = async (req) => {
             id_gender,
             id_gym_branch,
             photo_path: photoPath,
-            qr_code: qrPath
+            qr_code: qrPath,
+            id_user
         });
 
         // =========================
@@ -189,5 +191,90 @@ exports.searchSmart = async (filters) => {
     return {
         success: true,
         data
+    };
+};
+
+exports.getAll = async (id_gym_branch) => {
+
+    const db = await getConnectionDB();
+
+    const data = await MembersModel.getAll(db, id_gym_branch);
+
+    return {
+        success: true,
+        data
+    };
+};
+
+exports.updateMember = async (req) => {
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+    const bucket = await getBucket();
+
+    try {
+
+        const { id_member } = req.params;
+
+        const {
+            first_name,
+            first_surname,
+            second_surname,
+            birth_date,
+            email,
+            telephone,
+            id_gender
+        } = req.body;
+
+        let photoPath = null;
+
+        // 📸 actualizar foto si viene
+        if (req.file) {
+
+            if (!req.file.mimetype.startsWith('image/')) {
+                throw new Error('Invalid file type');
+            }
+
+            const fileName = `${uuidv4()}.jpg`;
+            photoPath = `members/photos/${fileName}`;
+
+            const file = bucket.file(photoPath);
+
+            await file.save(req.file.buffer, {
+                metadata: { contentType: req.file.mimetype }
+            });
+        }
+
+        await MembersModel.updateMember(conn, {
+            id_member,
+            first_name,
+            first_surname,
+            second_surname,
+            birth_date,
+            email,
+            telephone,
+            id_gender,
+            photo_path: photoPath
+        });
+
+        return {
+            success: true,
+            message: 'Socio actualizado'
+        };
+
+    } finally {
+        conn.release();
+    }
+};
+
+exports.deleteMember = async (id_member) => {
+
+    const db = await getConnectionDB();
+
+    await MembersModel.deleteMember(db, id_member);
+
+    return {
+        success: true,
+        message: 'Socio eliminado'
     };
 };
