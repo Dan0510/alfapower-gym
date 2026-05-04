@@ -362,7 +362,7 @@ exports.migrateMemberPhotos = async () => {
 
                 await conn.query(`
                     UPDATE tb_members
-                    SET photo_path = ?, photo_base64 = NULL
+                    SET photo_path = ?
                     WHERE id_member = ?
                 `, [publicUrl, member.id_member]);
 
