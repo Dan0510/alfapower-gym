@@ -23,7 +23,8 @@ function getCategoryFromMembership(membership) {
 
     // WEEKLY
     if (unit === 2) {
-        return 'SEMANA';
+        //return 'SEMANA';
+        return 'MENSUAL';
     }
 
     // MONTHLY (todo lo mensual)
