@@ -307,8 +307,8 @@ exports.migrateMemberPhotos = async () => {
             try {
 
                 let buffer;
-                let contentType = 'image/jpeg';
-                let extension = 'jpg';
+                let contentType = 'image/png';
+                let extension = 'png';
 
                 // 🧠 CASO 1: viene como STRING base64
                 if (typeof member.photo_base64 === 'string') {
