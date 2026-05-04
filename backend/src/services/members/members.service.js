@@ -289,26 +289,6 @@ const isBase64 = (str) => {
 };
 
 
-// 🔍 Detecta si parece base64
-function looksLikeBase64(str) {
-    return /^[A-Za-z0-9+/=\r\n]+$/.test(str.substring(0, 100));
-}
-
-// 🔍 Detecta tipo por firma binaria
-function detectMimeFromBuffer(buffer) {
-    const hex = buffer.toString('hex', 0, 4);
-
-    if (hex.startsWith('89504e47')) {
-        return { contentType: 'image/png', extension: 'png' };
-    }
-
-    if (hex.startsWith('ffd8')) {
-        return { contentType: 'image/jpeg', extension: 'jpg' };
-    }
-
-    return null;
-}
-
 exports.migrateMemberPhotos = async () => {
 
     const pool = await getConnectionDB();
@@ -321,7 +301,7 @@ exports.migrateMemberPhotos = async () => {
             SELECT id_member, photo_base64
             FROM tb_members
             WHERE photo_base64 IS NOT NULL
-            AND photo_path IS NULL AND  id_member <100
+            AND photo_path IS NULL AND id_member <100
         `);
 
         let processed = 0;
@@ -331,130 +311,63 @@ exports.migrateMemberPhotos = async () => {
             try {
 
                 let raw = member.photo_base64;
-                let buffer = null;
-                let contentType = 'image/jpeg';
-                let extension = 'jpg';
+
+                // 🔥 SIEMPRE CONVERTIR A STRING
+                let base64 = Buffer.isBuffer(raw)
+                    ? raw.toString('utf8')
+                    : raw;
+
+                if (!base64) continue;
+
+                base64 = base64.trim();
+
+                let extension = 'png'; // default
+                let contentType = 'image/png';
 
                 // =========================
-                // 🧠 CASO 1: BUFFER (BLOB)
+                // 🔍 DETECTAR HEADER
                 // =========================
-                if (Buffer.isBuffer(raw)) {
+                const match = base64.match(/^data:image\/(\w+);base64,/);
 
-                    let asString = raw.toString('utf8').trim();
+                if (match) {
+                    extension = match[1].toLowerCase();
+                    contentType = `image/${extension}`;
 
-                    // 🔥 limpiar caracteres basura antes del base64
-                    const index = asString.indexOf('data:image');
-                    if (index !== -1) {
-                        asString = asString.substring(index);
-                    }
-
-                    // =========================
-                    // 🔥 A: base64 con header
-                    // =========================
-                    if (asString.includes('data:image')) {
-
-                        const match = asString.match(/data:(image\/\w+);base64,([A-Za-z0-9+/=\r\n]+)/);
-
-                        if (match) {
-                            contentType = match[1];
-                            extension = contentType.split('/')[1];
-
-                            const cleanBase64 = match[2].replace(/\s/g, '');
-                            buffer = Buffer.from(cleanBase64, 'base64');
-                        }
-                    }
-
-                    // =========================
-                    // 🔥 B: base64 sin header
-                    // =========================
-                    else if (looksLikeBase64(asString)) {
-
-                        const cleanBase64 = asString.replace(/\s/g, '');
-                        buffer = Buffer.from(cleanBase64, 'base64');
-
-                        const detected = detectMimeFromBuffer(buffer);
-                        if (detected) {
-                            contentType = detected.contentType;
-                            extension = detected.extension;
-                        } else {
-                            console.warn(`Base64 inválido en ${member.id_member}`);
-                            continue;
-                        }
-                    }
-
-                    // =========================
-                    // 🔥 C: binario puro
-                    // =========================
-                    else {
-
-                        buffer = raw;
-
-                        const detected = detectMimeFromBuffer(buffer);
-                        if (detected) {
-                            contentType = detected.contentType;
-                            extension = detected.extension;
-                        } else {
-                            console.warn(`Formato binario desconocido en ${member.id_member}`);
-                            continue;
-                        }
-                    }
+                    base64 = base64.substring(base64.indexOf(',') + 1);
                 }
 
                 // =========================
-                // 🧠 CASO 2: STRING
+                // 🧹 LIMPIAR BASE64
                 // =========================
-                else if (typeof raw === 'string') {
-
-                    let base64 = raw.trim();
-
-                    const match = base64.match(/data:(image\/\w+);base64,([A-Za-z0-9+/=\r\n]+)/);
-
-                    if (match) {
-                        contentType = match[1];
-                        extension = contentType.split('/')[1];
-
-                        const cleanBase64 = match[2].replace(/\s/g, '');
-                        buffer = Buffer.from(cleanBase64, 'base64');
-                    } else {
-                        buffer = Buffer.from(base64, 'base64');
-
-                        const detected = detectMimeFromBuffer(buffer);
-                        if (detected) {
-                            contentType = detected.contentType;
-                            extension = detected.extension;
-                        }
-                    }
-                }
-
-                else {
-                    console.warn(`Tipo inválido en ${member.id_member}`);
-                    continue;
-                }
+                base64 = base64.replace(/\s/g, '');
 
                 // =========================
-                // 🚫 VALIDACIÓN FINAL
+                // 🔄 CONVERTIR A BUFFER
+                // =========================
+                const buffer = Buffer.from(base64, 'base64');
+
+                // =========================
+                // 🚫 VALIDAR
                 // =========================
                 if (!buffer || buffer.length < 100) {
-                    console.warn(`Imagen vacía en ${member.id_member}`);
+                    console.warn(`Imagen inválida en ${member.id_member}`);
                     continue;
                 }
 
                 // =========================
-                // 📁 SUBIR A GCP
+                // 📁 GUARDAR EN GCP
                 // =========================
                 const fileName = `members/photos/${member.id_member}_${Date.now()}.${extension}`;
                 const file = bucket.file(fileName);
 
                 await file.save(buffer, {
-                    metadata: {
-                        contentType: contentType
-                    }
+                    metadata: { contentType }
                 });
 
                 const publicUrl = `https://storage.googleapis.com/alfapower-gym/${fileName}`;
 
                 // =========================
-                // 💾 ACTUALIZAR BD
+                // 💾 UPDATE BD
                 // =========================
                 await conn.query(`
                     UPDATE tb_members
@@ -466,7 +379,7 @@ exports.migrateMemberPhotos = async () => {
                 console.log(`✅ OK miembro ${member.id_member}`);
 
             } catch (err) {
-                console.error(`❌ Error en miembro ${member.id_member}:`, err.message);
+                console.error(`❌ Error en ${member.id_member}:`, err.message);
             }
         }
 
