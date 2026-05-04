@@ -79,3 +79,15 @@ exports.deleteMember = async (req, res) => {
         });
     }
 };
+
+exports.migratePhotos = async (req, res) => {
+    try {
+        const result = await MembersService.migrateMemberPhotos();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

@@ -278,3 +278,78 @@ exports.deleteMember = async (id_member) => {
         message: 'Socio eliminado'
     };
 };
+
+
+
+exports.migrateMemberPhotos = async () => {
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+    const bucket = await getBucket();
+
+    try {
+
+        // 🔍 obtener socios con foto base64
+        const [members] = await conn.query(`
+            SELECT id_member, photo_base64
+            FROM tb_members
+            WHERE photo_base64 IS NOT NULL
+        `);
+
+        let processed = 0;
+
+        for (const member of members) {
+
+            try {
+
+                let base64 = member.photo_base64;
+
+                // 🧼 limpiar encabezado si viene tipo data:image/jpeg;base64,...
+                if (base64.includes('base64,')) {
+                    base64 = base64.split('base64,')[1];
+                }
+
+                // 🔄 convertir a buffer
+                const buffer = Buffer.from(base64, 'base64');
+
+                // 📁 generar nombre archivo
+                const fileName = `members/photos/${uuidv4()}.jpg`;
+
+                const file = bucket.file(fileName);
+
+                // ☁️ subir a bucket
+                await file.save(buffer, {
+                    metadata: {
+                        contentType: 'image/jpeg'
+                    }
+                });
+
+                // 🌐 URL pública
+                const publicUrl = `https://storage.googleapis.com/alfapower-gym/${fileName}`;
+
+                // 💾 actualizar BD
+                await conn.query(`
+                    UPDATE tb_members
+                    SET photo_path = ?, photo_base64 = NULL
+                    WHERE id_member = ?
+                `, [publicUrl, member.id_member]);
+
+                processed++;
+
+            } catch (err) {
+                console.error(`Error en socio ${member.id_member}`, err.message);
+            }
+        }
+
+        return {
+            success: true,
+            total: members.length,
+            processed
+        };
+
+    } catch (error) {
+        throw error;
+    } finally {
+        conn.release();
+    }
+};
