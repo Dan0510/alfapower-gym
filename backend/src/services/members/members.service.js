@@ -280,6 +280,13 @@ exports.deleteMember = async (id_member) => {
 };
 
 
+const isBase64 = (str) => {
+    try {
+        return Buffer.from(str, 'base64').toString('base64') === str.replace(/\s/g, '');
+    } catch {
+        return false;
+    }
+};
 
 exports.migrateMemberPhotos = async () => {
 
@@ -289,63 +296,84 @@ exports.migrateMemberPhotos = async () => {
 
     try {
 
-        // 🔍 obtener socios con foto base64
         const [members] = await conn.query(`
             SELECT id_member, photo_base64
             FROM tb_members
             WHERE photo_base64 IS NOT NULL
         `);
 
-        let processed = 0;
-
         for (const member of members) {
 
             try {
 
-                let base64 = member.photo_base64;
+                let buffer;
+                let contentType = 'image/jpeg';
+                let extension = 'jpg';
 
-                // 🧼 limpiar encabezado si viene tipo data:image/jpeg;base64,...
-                if (base64.includes('base64,')) {
-                    base64 = base64.split('base64,')[1];
+                // 🧠 CASO 1: viene como STRING base64
+                if (typeof member.photo_base64 === 'string') {
+
+                    let base64 = member.photo_base64.trim();
+
+                    // limpiar header
+                    if (base64.includes('base64,')) {
+                        const parts = base64.split('base64,');
+                        const header = parts[0];
+
+                        base64 = parts[1];
+
+                        if (header.includes('image/png')) {
+                            contentType = 'image/png';
+                            extension = 'png';
+                        }
+                    }
+
+                    if (!isBase64(base64)) {
+                        console.warn(`Base64 inválido en ${member.id_member}`);
+                        continue;
+                    }
+
+                    buffer = Buffer.from(base64, 'base64');
+
+                } 
+                // 🧠 CASO 2: ya es binario (BLOB)
+                else if (Buffer.isBuffer(member.photo_base64)) {
+                    buffer = member.photo_base64;
+                } 
+                else {
+                    console.warn(`Formato desconocido en ${member.id_member}`);
+                    continue;
                 }
 
-                // 🔄 convertir a buffer
-                const buffer = Buffer.from(base64, 'base64');
+                // 🚫 evitar archivos vacíos
+                if (!buffer || buffer.length < 100) {
+                    console.warn(`Imagen vacía en ${member.id_member}`);
+                    continue;
+                }
 
-                // 📁 generar nombre archivo
-                const fileName = `members/photos/${uuidv4()}.jpg`;
-
+                const fileName = `members/photos/${member.id_member}_${Date.now()}.${extension}`;
                 const file = bucket.file(fileName);
 
-                // ☁️ subir a bucket
                 await file.save(buffer, {
-                    metadata: {
-                        contentType: 'image/jpeg'
-                    }
+                    metadata: { contentType }
                 });
 
-                // 🌐 URL pública
                 const publicUrl = `https://storage.googleapis.com/alfapower-gym/${fileName}`;
 
-                // 💾 actualizar BD
                 await conn.query(`
                     UPDATE tb_members
                     SET photo_path = ?, photo_base64 = NULL
                     WHERE id_member = ?
                 `, [publicUrl, member.id_member]);
 
-                processed++;
+                console.log(`✅ OK miembro ${member.id_member}`);
 
             } catch (err) {
-                console.error(`Error en socio ${member.id_member}`, err.message);
+                console.error(`❌ Error en ${member.id_member}:`, err.message);
             }
         }
 
-        return {
-            success: true,
-            total: members.length,
-            processed
-        };
+        return { success: true };
 
     } catch (error) {
         throw error;
