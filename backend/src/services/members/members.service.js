@@ -289,6 +289,7 @@ const isBase64 = (str) => {
 };
 
 
+
 exports.migrateMemberPhotos = async () => {
 
     const pool = await getConnectionDB();
@@ -301,7 +302,7 @@ exports.migrateMemberPhotos = async () => {
             SELECT id_member, photo_base64
             FROM tb_members
             WHERE photo_base64 IS NOT NULL
-            AND photo_path IS NULL AND id_member <100
+            AND photo_path IS NULL AND id_member<100
         `);
 
         let processed = 0;
