@@ -288,8 +288,6 @@ const isBase64 = (str) => {
     }
 };
 
-const { getConnectionDB } = require('../../config/db/connection');
-const { getBucket } = require('../../config/gcp/storage');
 
 exports.migrateMemberPhotos = async () => {
 
