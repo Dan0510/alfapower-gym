@@ -310,73 +310,79 @@ exports.migrateMemberPhotos = async () => {
 
             try {
 
-                let base64 = member.photo_base64;
-
-                if (!base64) continue;
-
-                // =========================
-                // 🧠 DETECTAR TIPO IMAGEN
-                // =========================
-                const match = base64.match(/^data:(image\/\w+);base64,/);
-
+                let buffer;
                 let contentType = 'image/jpeg';
                 let extension = 'jpg';
 
-                if (match) {
-                    contentType = match[1]; // image/png | image/jpeg
-                    extension = contentType.split('/')[1];
+                // =========================
+                // 🧠 CASO 1: ES STRING (base64 real)
+                // =========================
+                if (typeof member.photo_base64 === 'string') {
+
+                    let base64 = member.photo_base64.trim();
+
+                    const match = base64.match(/^data:(image\/\w+);base64,/);
+
+                    if (match) {
+                        contentType = match[1];
+                        extension = contentType.split('/')[1];
+                    }
+
+                    base64 = base64.replace(/^data:image\/\w+;base64,/, '');
+                    base64 = base64.replace(/\s/g, '');
+
+                    buffer = Buffer.from(base64, 'base64');
                 }
 
                 // =========================
-                // 🧼 LIMPIAR BASE64
+                // 🧠 CASO 2: ES BLOB (Buffer)
                 // =========================
-                base64 = base64.replace(/^data:image\/\w+;base64,/, '');
-                base64 = base64.replace(/\s/g, ''); // quitar espacios
+                else if (Buffer.isBuffer(member.photo_base64)) {
+
+                    buffer = member.photo_base64;
+
+                    // detectar tipo real por firma
+                    const hex = buffer.toString('hex', 0, 4);
+
+                    if (hex.startsWith('89504e47')) {
+                        contentType = 'image/png';
+                        extension = 'png';
+                    } else if (hex.startsWith('ffd8')) {
+                        contentType = 'image/jpeg';
+                        extension = 'jpg';
+                    } else {
+                        console.warn(`Formato desconocido en ${member.id_member}`);
+                        continue;
+                    }
+                }
+
+                else {
+                    console.warn(`Tipo inválido en ${member.id_member}`);
+                    continue;
+                }
 
                 // =========================
-                // 🔄 CONVERTIR A BUFFER
-                // =========================
-                const buffer = Buffer.from(base64, 'base64');
-
-                // =========================
-                // 🚫 VALIDAR BUFFER
+                // 🚫 VALIDACIÓN
                 // =========================
                 if (!buffer || buffer.length < 100) {
-                    console.warn(`Imagen inválida en miembro ${member.id_member}`);
-                    continue;
-                }
-
-                // validar firma archivo (PNG/JPG)
-                const isPNG = buffer.toString('hex', 0, 4) === '89504e47';
-                const isJPG = buffer.toString('hex', 0, 2) === 'ffd8';
-
-                if (!isPNG && !isJPG) {
-                    console.warn(`Formato no válido en miembro ${member.id_member}`);
+                    console.warn(`Imagen vacía en ${member.id_member}`);
                     continue;
                 }
 
                 // =========================
-                // 📁 CREAR ARCHIVO
+                // 📁 SUBIR ARCHIVO
                 // =========================
                 const fileName = `members/photos/${member.id_member}_${Date.now()}.${extension}`;
                 const file = bucket.file(fileName);
 
-                // =========================
-                // ☁️ SUBIR A GCP
-                // =========================
                 await file.save(buffer, {
-                    metadata: {
-                        contentType: contentType
-                    }
+                    metadata: { contentType }
                 });
 
-                // =========================
-                // 🌐 URL PÚBLICA
-                // =========================
                 const publicUrl = `https://storage.googleapis.com/alfapower-gym/${fileName}`;
 
                 // =========================
-                // 💾 UPDATE BD
+                // 💾 UPDATE
                 // =========================
                 await conn.query(`
                     UPDATE tb_members
