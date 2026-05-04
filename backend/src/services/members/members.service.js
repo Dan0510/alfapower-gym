@@ -288,6 +288,8 @@ const isBase64 = (str) => {
     }
 };
 
+const { getConnectionDB } = require('../../config/db/connection');
+const { getBucket } = require('../../config/gcp/storage');
 
 exports.migrateMemberPhotos = async () => {
 
@@ -301,7 +303,7 @@ exports.migrateMemberPhotos = async () => {
             SELECT id_member, photo_base64
             FROM tb_members
             WHERE photo_base64 IS NOT NULL
-            AND photo_path IS NULL AND id_member < 100
+            AND photo_path IS NULL
         `);
 
         let processed = 0;
@@ -310,16 +312,60 @@ exports.migrateMemberPhotos = async () => {
 
             try {
 
+                let raw = member.photo_base64;
                 let buffer;
                 let contentType = 'image/jpeg';
                 let extension = 'jpg';
 
                 // =========================
-                // 🧠 CASO 1: ES STRING (base64 real)
+                // 🧠 CASO 1: BUFFER (BLOB)
                 // =========================
-                if (typeof member.photo_base64 === 'string') {
+                if (Buffer.isBuffer(raw)) {
 
-                    let base64 = member.photo_base64.trim();
+                    const asString = raw.toString('utf8');
+
+                    // 🔍 si contiene base64 (texto)
+                    if (asString.startsWith('data:image')) {
+
+                        let base64 = asString;
+
+                        const match = base64.match(/^data:(image\/\w+);base64,/);
+
+                        if (match) {
+                            contentType = match[1];
+                            extension = contentType.split('/')[1];
+                        }
+
+                        base64 = base64.replace(/^data:image\/\w+;base64,/, '');
+                        base64 = base64.replace(/\s/g, '');
+
+                        buffer = Buffer.from(base64, 'base64');
+
+                    } else {
+                        // 🔥 ES BINARIO REAL
+                        buffer = raw;
+
+                        const hex = buffer.toString('hex', 0, 4);
+
+                        if (hex.startsWith('89504e47')) {
+                            contentType = 'image/png';
+                            extension = 'png';
+                        } else if (hex.startsWith('ffd8')) {
+                            contentType = 'image/jpeg';
+                            extension = 'jpg';
+                        } else {
+                            console.warn(`Formato binario desconocido en ${member.id_member}`);
+                            continue;
+                        }
+                    }
+                }
+
+                // =========================
+                // 🧠 CASO 2: STRING
+                // =========================
+                else if (typeof raw === 'string') {
+
+                    let base64 = raw.trim();
 
                     const match = base64.match(/^data:(image\/\w+);base64,/);
 
@@ -334,35 +380,13 @@ exports.migrateMemberPhotos = async () => {
                     buffer = Buffer.from(base64, 'base64');
                 }
 
-                // =========================
-                // 🧠 CASO 2: ES BLOB (Buffer)
-                // =========================
-                else if (Buffer.isBuffer(member.photo_base64)) {
-
-                    buffer = member.photo_base64;
-
-                    // detectar tipo real por firma
-                    const hex = buffer.toString('hex', 0, 4);
-
-                    if (hex.startsWith('89504e47')) {
-                        contentType = 'image/png';
-                        extension = 'png';
-                    } else if (hex.startsWith('ffd8')) {
-                        contentType = 'image/jpeg';
-                        extension = 'jpg';
-                    } else {
-                        console.warn(`Formato desconocido en ${member.id_member}`);
-                        continue;
-                    }
-                }
-
                 else {
                     console.warn(`Tipo inválido en ${member.id_member}`);
                     continue;
                 }
 
                 // =========================
-                // 🚫 VALIDACIÓN
+                // 🚫 VALIDAR
                 // =========================
                 if (!buffer || buffer.length < 100) {
                     console.warn(`Imagen vacía en ${member.id_member}`);
@@ -370,7 +394,7 @@ exports.migrateMemberPhotos = async () => {
                 }
 
                 // =========================
-                // 📁 SUBIR ARCHIVO
+                // 📁 SUBIR
                 // =========================
                 const fileName = `members/photos/${member.id_member}_${Date.now()}.${extension}`;
                 const file = bucket.file(fileName);
@@ -381,9 +405,6 @@ exports.migrateMemberPhotos = async () => {
 
                 const publicUrl = `https://storage.googleapis.com/alfapower-gym/${fileName}`;
 
-                // =========================
-                // 💾 UPDATE
-                // =========================
                 await conn.query(`
                     UPDATE tb_members
                     SET photo_path = ?
@@ -394,7 +415,7 @@ exports.migrateMemberPhotos = async () => {
                 console.log(`✅ OK miembro ${member.id_member}`);
 
             } catch (err) {
-                console.error(`❌ Error en miembro ${member.id_member}:`, err.message);
+                console.error(`❌ Error en ${member.id_member}:`, err.message);
             }
         }
 
