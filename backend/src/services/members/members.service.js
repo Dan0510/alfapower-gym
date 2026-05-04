@@ -301,7 +301,7 @@ exports.migrateMemberPhotos = async () => {
             SELECT id_member, photo_base64
             FROM tb_members
             WHERE photo_base64 IS NOT NULL
-            AND photo_path IS NULL
+            AND photo_path IS NULL AND id_member < 5
         `);
 
         let processed = 0;
