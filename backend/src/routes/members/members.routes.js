@@ -5,7 +5,7 @@ const multer = require('multer');
 const MembersController = require('../../controllers/members/members.controller');
 
 const upload = multer({ storage: multer.memoryStorage() });
-router.get('/migrate-photos', MembersController.migratePhotos);
+router.post('/migrate-photos', MembersController.migratePhotos);
 router.post('/create', upload.single('photo'), MembersController.createMember);
 router.get('/search', MembersController.searchSmart);
 router.get('/list/:id_gym_branch', MembersController.getAll);
