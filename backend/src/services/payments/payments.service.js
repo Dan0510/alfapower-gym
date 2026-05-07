@@ -223,11 +223,35 @@ for (const m of members) {
     let baseDate;
     let isNewMember = !member.next_payment_date; // 👈 CLAVE
 
+    const today = new Date();
+
     if (!member.next_payment_date) {
+
+        baseDate = new Date();
+
+    } else {
+
+        const nextPaymentDate = new Date(member.next_payment_date);
+
+        // Si la membresía es SEMANA y la fecha ya venció
+        if (
+            member.membership_name === 'SEMANA' &&
+            nextPaymentDate < today
+        ) {
+
+            baseDate = new Date();
+
+        } else {
+
+            baseDate = nextPaymentDate;
+
+        }
+    }
+    /*if (!member.next_payment_date) {
         baseDate = new Date();
     } else {
         baseDate = new Date(member.next_payment_date);
-    }
+    }*/
 
     // ➕ nueva fecha
     const newDate = new Date(baseDate);
