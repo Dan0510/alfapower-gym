@@ -419,7 +419,7 @@ exports.getTodayPayments = async (req) => {
     const [rows] = await db.query(`
         SELECT 
             p.id_payment,
-            p.payment_folio,
+            p.invoice AS payment_folio,
             GROUP_CONCAT(
                 DISTINCT CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
                 SEPARATOR ' / '
@@ -453,8 +453,14 @@ exports.getTodayPayments = async (req) => {
             ON u.id_user = p.created_by
 
         WHERE p.id_gym_branch = ?
-        AND p.payment_date >= CURDATE()
-        AND p.payment_date < CURDATE() + INTERVAL 1 DAY
+        AND DATE_FORMAT(
+                DATE_SUB(p.payment_date, INTERVAL 6 HOUR),
+                '%Y-%m-%d'
+            ) >= CURDATE()
+        AND DATE_FORMAT(
+            DATE_SUB(p.payment_date, INTERVAL 6 HOUR),
+            '%Y-%m-%d'
+            ) < CURDATE() + INTERVAL 1 DAY
         AND p.payment_status !='CANCELADO'
         GROUP BY p.id_payment
         ORDER BY p.payment_date DESC
