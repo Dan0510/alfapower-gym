@@ -487,7 +487,7 @@ exports.filterPayments = async (req) => {
     let query = `
         SELECT 
             p.id_payment,
-            p.payment_folio,
+            p.invoice AS payment_folio,
             GROUP_CONCAT(
                 DISTINCT CONCAT(m.membership_number, ' - ', m.first_name, ' ', m.first_surname)
                 SEPARATOR ' / '
