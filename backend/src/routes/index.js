@@ -10,6 +10,7 @@ router.use('/payment-folio', require('./payments/payments-folio.routes'));
 router.use('/catalogs', require('./catalogs/unitMeasurement.routes'));
 router.use('/users', require('./users/users.routes'));
 router.use('/access', require('./access/access.routes'));
+router.use('/reviews', require('./reviews/reviews.routes'));
 
 
 module.exports = router;
