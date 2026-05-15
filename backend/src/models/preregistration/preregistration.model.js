@@ -22,7 +22,7 @@ exports.createPreRegistrationMember = async (db, data) => {
             email,
             telephone,
             id_gender,
-            interested_membership_id
+            interested_membership_id,
             id_gym_branch
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
