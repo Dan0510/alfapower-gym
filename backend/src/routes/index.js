@@ -11,6 +11,6 @@ router.use('/catalogs', require('./catalogs/unitMeasurement.routes'));
 router.use('/users', require('./users/users.routes'));
 router.use('/access', require('./access/access.routes'));
 router.use('/reviews', require('./reviews/reviews.routes'));
-router.use('/pre-registration', require('./pre-registration/pre-registration.routes'));
+router.use('/preregistration', require('./preregistration/preregistration.routes'));
 
 module.exports = router;
