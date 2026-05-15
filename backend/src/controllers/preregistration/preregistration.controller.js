@@ -1,4 +1,4 @@
-const PreRegistrationService = require('../../services/pre-registration/pre-registration.service');
+const PreRegistrationService = require('../../services/preregistration/preregistration.service');
 
 exports.createPreRegistration = async (req, res) => {
 

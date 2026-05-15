@@ -1,6 +1,6 @@
 const { getConnectionDB } = require('../../config/db/connection');
 
-const PreRegistrationModel = require('../../models/pre-registration/pre-registration.model');
+const PreRegistrationModel = require('../../models/preregistration/preregistration.model');
 
 function generateRegistrationCode() {
 
