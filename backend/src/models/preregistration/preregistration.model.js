@@ -21,9 +21,11 @@ exports.createPreRegistrationMember = async (db, data) => {
             birth_date,
             email,
             telephone,
-            id_gender
+            id_gender,
+            interested_membership_id
+            id_gym_branch
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
         data.registration_code,
         data.first_name,
@@ -32,7 +34,9 @@ exports.createPreRegistrationMember = async (db, data) => {
         data.birth_date,
         data.email,
         data.telephone,
-        data.id_gender
+        data.id_gender,
+        data.interested_membership_id,
+        data.id_gym_branch
     ]);
 
     return result;

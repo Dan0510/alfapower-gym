@@ -126,7 +126,9 @@ exports.createPreRegistration = async (req) => {
                     email: m.email || null,
                     telephone: m.telephone || null,
                     id_gender: m.id_gender || null,
-                    registration_code
+                    registration_code,
+                    interested_membership_id,
+                    id_gym_branch
                 }
             );
         }
