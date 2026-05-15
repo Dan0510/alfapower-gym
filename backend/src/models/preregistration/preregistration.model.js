@@ -13,7 +13,7 @@ exports.existsCode = async (db, registration_code) => {
 exports.createPreRegistrationMember = async (db, data) => {
 
     const [result] = await db.query(`
-        INSERT INTO tb_member_pre_registration_members (
+        INSERT INTO tb_member_pre_registration (
             registration_code,
             first_name,
             first_surname,
