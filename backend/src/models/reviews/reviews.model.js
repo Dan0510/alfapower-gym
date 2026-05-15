@@ -2,16 +2,14 @@ exports.createReview = async (db, data) => {
 
     const [result] = await db.query(`
         INSERT INTO tb_member_reviews (
-            id_member,
             id_gym_branch,
             member_name,
             rating,
             comment,
             created_by_ip
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
     `, [
-        data.id_member,
         data.id_gym_branch,
         data.member_name,
         data.rating,
