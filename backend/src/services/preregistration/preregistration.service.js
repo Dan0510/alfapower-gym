@@ -119,7 +119,6 @@ exports.createPreRegistration = async (req) => {
             await PreRegistrationModel.createPreRegistrationMember(
                 conn,
                 {
-                    id_pre_registration,
                     first_name: m.first_name,
                     first_surname: m.first_surname,
                     second_surname: m.second_surname || null,
