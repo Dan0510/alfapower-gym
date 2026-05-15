@@ -138,7 +138,6 @@ exports.createPreRegistration = async (req) => {
         return {
             success: true,
             message: 'Pre registro creado correctamente',
-            id_pre_registration,
             registration_code,
             members_count: members.length
         };
