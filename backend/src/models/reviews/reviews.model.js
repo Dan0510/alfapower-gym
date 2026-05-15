@@ -25,21 +25,19 @@ exports.getReviews = async (db, filters) => {
     let query = `
         SELECT
             r.id_review,
-            r.id_member,
             r.member_name,
             r.rating,
             r.comment,
-            r.created_at,
-            CONCAT(
-                'https://storage.googleapis.com/alfapower-gym/',
-                m.photo_path
-            ) AS photo_url
+            r.created_at
+           
         FROM tb_member_reviews r
-        LEFT JOIN tb_members m
-            ON m.id_member = r.id_member
         WHERE r.status = 1
     `;
 
+    /* CONCAT(
+                'https://storage.googleapis.com/alfapower-gym/',
+                m.photo_path
+            ) AS photo_url*/
     const params = [];
 
     if (filters.id_gym_branch) {
