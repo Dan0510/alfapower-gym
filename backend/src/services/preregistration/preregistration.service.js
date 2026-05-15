@@ -92,7 +92,7 @@ exports.createPreRegistration = async (req) => {
         // CREAR PRE REGISTRO
         // =========================
 
-        const result = await PreRegistrationModel.createPreRegistration(
+        /*const result = await PreRegistrationModel.createPreRegistration(
             conn,
             {
                 registration_code,
@@ -106,7 +106,7 @@ exports.createPreRegistration = async (req) => {
             }
         );
 
-        const id_pre_registration = result.insertId;
+        const id_pre_registration = result.insertId;*/
 
         // =========================
         // GUARDAR SOCIOS
@@ -127,7 +127,7 @@ exports.createPreRegistration = async (req) => {
                     email: m.email || null,
                     telephone: m.telephone || null,
                     id_gender: m.id_gender || null,
-                    is_primary: i === 0 ? 1 : 0
+                    registration_code
                 }
             );
         }

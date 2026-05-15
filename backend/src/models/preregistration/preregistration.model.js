@@ -15,26 +15,26 @@ exports.createPreRegistrationMember = async (db, data) => {
     const [result] = await db.query(`
         INSERT INTO tb_member_pre_registration_members (
             id_pre_registration,
+            registration_code,
             first_name,
             first_surname,
             second_surname,
             birth_date,
             email,
             telephone,
-            id_gender,
-            is_primary
+            id_gender
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
         data.id_pre_registration,
+        data.registration_code,
         data.first_name,
         data.first_surname,
         data.second_surname,
         data.birth_date,
         data.email,
         data.telephone,
-        data.id_gender,
-        data.is_primary
+        data.id_gender
     ]);
 
     return result;
