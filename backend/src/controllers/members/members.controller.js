@@ -91,3 +91,20 @@ exports.migratePhotos = async (req, res) => {
         });
     }
 };
+
+exports.updateNextPaymentDate = async (req, res) => {
+
+    try {
+
+        const result = await MembersService.updateNextPaymentDate(req);
+
+        res.json(result);
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

@@ -396,3 +396,157 @@ exports.migrateMemberPhotos = async () => {
         conn.release();
     }
 };
+
+exports.updateNextPaymentDate = async (req) => {
+
+    const pool = await getConnectionDB();
+
+    const conn = await pool.getConnection();
+
+    await conn.beginTransaction();
+
+    try {
+
+        const {
+            id_member,
+            next_payment_date,
+            notes,
+            id_user
+        } = req.body;
+
+        // =========================
+        // VALIDACIONES
+        // =========================
+
+        if (!id_member) {
+            throw new Error('id_member is required');
+        }
+
+        if (!next_payment_date) {
+            throw new Error('next_payment_date is required');
+        }
+
+        // =========================
+        // OBTENER SOCIO
+        // =========================
+
+        const [[member]] = await conn.query(`
+            SELECT
+                id_member,
+                id_gym_branch,
+                membership_number,
+                first_name,
+                first_surname,
+                next_payment_date
+            FROM tb_members
+            WHERE id_member = ?
+            LIMIT 1
+            FOR UPDATE
+        `, [id_member]);
+
+        if (!member) {
+            throw new Error('Member not found');
+        }
+
+        const oldDate = member.next_payment_date;
+
+        // =========================
+        // ACTUALIZAR FECHA
+        // =========================
+
+        await conn.query(`
+            UPDATE tb_members
+            SET
+                next_payment_date = ?,
+                updated_at = NOW(),
+                updated_by = ?
+            WHERE id_member = ?
+        `, [
+            next_payment_date,
+            id_user || null,
+            id_member
+        ]);
+
+        // =========================
+        // GUARDAR HISTORIAL
+        // =========================
+
+        await conn.query(`
+            INSERT INTO tb_member_payment_history (
+                id_member,
+                previous_next_payment_date,
+                new_next_payment_date,
+                movement_type,
+                notes,
+                created_by
+            )
+            VALUES (?, ?, ?, 'AJUSTE', ?, ?)
+        `, [
+            id_member,
+            oldDate,
+            next_payment_date,
+            notes || 'Ajuste manual',
+            id_user || null
+        ]);
+
+        // =========================
+        // LOG DEL SISTEMA
+        // =========================
+
+        await conn.query(`
+            INSERT INTO tb_system_logs (
+                id_user,
+                id_gym_branch,
+                module_name,
+                action_type,
+                table_name,
+                record_id,
+                description,
+                old_values,
+                new_values,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        `, [
+            id_user || null,
+            member.id_gym_branch,
+            'MEMBERS',
+            'UPDATE',
+            'tb_members',
+            id_member,
+
+            `Modificó fecha de pago del socio ${member.first_name} ${member.first_surname}`,
+
+            JSON.stringify({
+                next_payment_date: oldDate
+            }),
+
+            JSON.stringify({
+                next_payment_date
+            })
+        ]);
+
+        await conn.commit();
+
+        return {
+            success: true,
+            message: 'Fecha de pago actualizada correctamente',
+            data: {
+                id_member,
+                membership_number: member.membership_number,
+                previous_next_payment_date: oldDate,
+                new_next_payment_date: next_payment_date
+            }
+        };
+
+    } catch (error) {
+
+        await conn.rollback();
+
+        throw error;
+
+    } finally {
+
+        conn.release();
+    }
+};
