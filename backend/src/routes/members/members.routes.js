@@ -15,6 +15,9 @@ router.put(
 router.get('/list/:id_gym_branch', MembersController.getAll);
 router.put('/update/:id_member', upload.single('photo'), MembersController.updateMember);
 router.delete('/delete/:id_member', MembersController.deleteMember);
-
+router.get(
+    '/payment-history/:id_member',
+    MembersController.getPaymentHistory
+);
 
 module.exports = router;

@@ -550,3 +550,23 @@ exports.updateNextPaymentDate = async (req) => {
         conn.release();
     }
 };
+
+exports.getPaymentHistory = async (id_member) => {
+
+    const db = await getConnectionDB();
+
+    if (!id_member) {
+        throw new Error('id_member is required');
+    }
+
+    const payments = await MembersModel.getPaymentHistory(
+        db,
+        id_member
+    );
+
+    return {
+        success: true,
+        total: payments.length,
+        data: payments
+    };
+};

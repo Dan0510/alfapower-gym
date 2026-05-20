@@ -108,3 +108,22 @@ exports.updateNextPaymentDate = async (req, res) => {
         });
     }
 };
+
+exports.getPaymentHistory = async (req, res) => {
+
+    try {
+
+        const result = await MembersService.getPaymentHistory(
+            req.params.id_member
+        );
+
+        res.json(result);
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

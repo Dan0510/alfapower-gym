@@ -169,3 +169,69 @@ exports.deleteMember = async (db, id_member) => {
         WHERE id_member = ?
     `, [id_member]);
 };
+
+exports.getPaymentHistory = async (db, id_member) => {
+
+    const [rows] = await db.query(`
+        SELECT
+            p.id_payment,
+            p.payment_folio,
+
+            m.id_membership,
+            m.membership_name,
+
+            p.total_amount,
+            p.discount_amount,
+            p.paid_amount,
+            p.pending_amount,
+
+            p.payment_status,
+
+            p.notes,
+
+            p.payment_date,
+
+            p.payment_receipt_path,
+
+            p.invoice,
+
+            -- cantidad de socios del pago
+            (
+                SELECT COUNT(*)
+                FROM rel_payment_members rpm2
+                WHERE rpm2.id_payment = p.id_payment
+            ) AS members_count,
+
+            -- socios relacionados
+            (
+                SELECT GROUP_CONCAT(
+                    CONCAT(
+                        tm.membership_number,
+                        ' - ',
+                        tm.first_name,
+                        ' ',
+                        tm.first_surname
+                    )
+                    SEPARATOR ' | '
+                )
+                FROM rel_payment_members rpm3
+                INNER JOIN tb_members tm
+                    ON tm.id_member = rpm3.id_member
+                WHERE rpm3.id_payment = p.id_payment
+            ) AS members
+
+        FROM rel_payment_members rpm
+
+        INNER JOIN tb_member_payments p
+            ON p.id_payment = rpm.id_payment
+
+        INNER JOIN cat_memberships m
+            ON m.id_membership = p.id_membership
+
+        WHERE rpm.id_member = ?
+
+        ORDER BY p.payment_date DESC
+    `, [id_member]);
+
+    return rows;
+};
