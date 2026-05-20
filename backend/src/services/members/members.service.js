@@ -574,7 +574,7 @@ exports.getPaymentHistory = async (id_member) => {
 exports.getAccessDays = async (id_member) => {
 
     const db = await getConnectionDB();
-    const dbBackup = getConnectionBackupDB();
+    const dbBackup = await getConnectionBackupDB();
 
     if (!id_member) {
         throw new Error('id_member is required');
