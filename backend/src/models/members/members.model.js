@@ -240,9 +240,17 @@ exports.getAccessDays = async (db, id_member) => {
 
     const [rows] = await db.query(`
         SELECT
-            DATE(al.access_datetime) AS access_date,
+            DATE_FORMAT(al.access_datetime,'%d-%m-%Y') AS access_date,
 
-            DAYNAME(al.access_datetime) AS day_name,
+            CASE DAYOFWEEK(al.access_datetime)
+                WHEN 1 THEN 'Domingo'
+                WHEN 2 THEN 'Lunes'
+                WHEN 3 THEN 'Martes'
+                WHEN 4 THEN 'Miércoles'
+                WHEN 5 THEN 'Jueves'
+                WHEN 6 THEN 'Viernes'
+                WHEN 7 THEN 'Sábado'
+            END AS day_name,
 
             MIN(al.access_datetime) AS first_access,
 
