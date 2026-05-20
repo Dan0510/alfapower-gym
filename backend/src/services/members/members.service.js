@@ -480,7 +480,7 @@ exports.updateNextPaymentDate = async (req) => {
                 notes,
                 created_by
             )
-            VALUES (?, ?, ?, ''ADJUSTMENT')', ?, ?)
+            VALUES (?, ?, ?, 'ADJUSTMENT', ?, ?)
         `, [
             id_member,
             oldDate,
