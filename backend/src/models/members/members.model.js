@@ -240,7 +240,7 @@ exports.getAccessDays = async (db, id_member) => {
 
     const [rows] = await db.query(`
         SELECT
-         DATE_FORMAT(al.access_datetime - INTERVAL 6 HOUR,'%d-%m-%Y %H:%i:%s') AS access_date
+         DATE_FORMAT(al.access_datetime - INTERVAL 6 HOUR,'%d-%m-%Y %H:%i:%s') AS access_date,
             CASE DAYOFWEEK(al.access_datetime)
                 WHEN 1 THEN 'Domingo'
                 WHEN 2 THEN 'Lunes'
