@@ -8,16 +8,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post('/migrate-photos', MembersController.migratePhotos);
 router.post('/create', upload.single('photo'), MembersController.createMember);
 router.get('/search', MembersController.searchSmart);
-router.put(
-    '/update-next-payment-date',
-    MembersController.updateNextPaymentDate
-);
+router.put('/update-next-payment-date', MembersController.updateNextPaymentDate);
 router.get('/list/:id_gym_branch', MembersController.getAll);
 router.put('/update/:id_member', upload.single('photo'), MembersController.updateMember);
 router.delete('/delete/:id_member', MembersController.deleteMember);
+router.get('/payment-history/:id_member',MembersController.getPaymentHistory);
 router.get(
-    '/payment-history/:id_member',
-    MembersController.getPaymentHistory
+    '/access-days/:id_member',
+    MembersController.getAccessDays
 );
 
 module.exports = router;

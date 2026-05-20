@@ -127,3 +127,22 @@ exports.getPaymentHistory = async (req, res) => {
         });
     }
 };
+
+exports.getAccessDays = async (req, res) => {
+
+    try {
+
+        const result = await MembersService.getAccessDays(
+            req.params.id_member
+        );
+
+        res.json(result);
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

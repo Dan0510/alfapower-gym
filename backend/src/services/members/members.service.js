@@ -570,3 +570,23 @@ exports.getPaymentHistory = async (id_member) => {
         data: payments
     };
 };
+
+exports.getAccessDays = async (id_member) => {
+
+    const db = await getConnectionDB();
+
+    if (!id_member) {
+        throw new Error('id_member is required');
+    }
+
+    const data = await MembersModel.getAccessDays(
+        db,
+        id_member
+    );
+
+    return {
+        success: true,
+        total: data.length,
+        data
+    };
+};

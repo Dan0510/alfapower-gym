@@ -235,3 +235,47 @@ exports.getPaymentHistory = async (db, id_member) => {
 
     return rows;
 };
+
+exports.getAccessDays = async (db, id_member) => {
+
+    const [rows] = await db.query(`
+        SELECT
+            DATE(al.access_datetime) AS access_date,
+
+            DAYNAME(al.access_datetime) AS day_name,
+
+            MIN(al.access_datetime) AS first_access,
+
+            MAX(al.access_datetime) AS last_access,
+
+            COUNT(*) AS total_accesses,
+
+            SUM(
+                CASE
+                    WHEN at.is_entry = 1 THEN 1
+                    ELSE 0
+                END
+            ) AS total_entries,
+
+            SUM(
+                CASE
+                    WHEN at.is_exit = 1 THEN 1
+                    ELSE 0
+                END
+            ) AS total_exits
+
+        FROM tb_access_log al
+
+        INNER JOIN cat_access_types at
+            ON at.id_access_type = al.id_access_type
+
+        WHERE al.id_member = ?
+        AND al.access_granted = 1
+
+        GROUP BY DATE(al.access_datetime)
+
+        ORDER BY access_date DESC
+    `, [id_member]);
+
+    return rows;
+};
