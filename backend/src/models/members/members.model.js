@@ -236,7 +236,7 @@ exports.getPaymentHistory = async (db, id_member) => {
     return rows;
 };
 
-exports.getAccessDays = async (db, id_member) => {
+exports.getAccessDays = async (db,dbBackup, id_member) => {
 
     const [rows] = await db.query(`
         SELECT
@@ -249,27 +249,7 @@ exports.getAccessDays = async (db, id_member) => {
                 WHEN 5 THEN 'Jueves'
                 WHEN 6 THEN 'Viernes'
                 WHEN 7 THEN 'Sábado'
-            END AS day_name,
-
-            MIN(al.access_datetime) AS first_access,
-
-            MAX(al.access_datetime) AS last_access,
-
-            COUNT(*) AS total_accesses,
-
-            SUM(
-                CASE
-                    WHEN at.is_entry = 1 THEN 1
-                    ELSE 0
-                END
-            ) AS total_entries,
-
-            SUM(
-                CASE
-                    WHEN at.is_exit = 1 THEN 1
-                    ELSE 0
-                END
-            ) AS total_exits
+            END AS day_name
 
         FROM tb_access_log al
 
@@ -284,5 +264,44 @@ exports.getAccessDays = async (db, id_member) => {
         ORDER BY access_date DESC
     `, [id_member]);
 
-    return rows;
+    const [member] = await db.query(`
+        SELECT membership_number FROM tb_members WHERE id_member = ?
+    `, [id_member]);
+
+    const membershipNumber = member[0]?.membership_number;
+
+     const [memberBackcup] = await dbBackup.query(`
+        SELECT id_member FROM tb_members WHERE membership_number = ?
+    `, [membershipNumber]);
+
+    const id_member_backcup = memberBackcup[0]?.id_member;
+
+
+    const [rowsBackup] = await dbBackup.query(`
+        SELECT
+         DATE_FORMAT(visit_date - INTERVAL 6 HOUR,'%d-%m-%Y %H:%i:%s') AS access_date,
+            CASE DAYOFWEEK(visit_date - INTERVAL 6 HOUR)
+                WHEN 1 THEN 'Domingo'
+                WHEN 2 THEN 'Lunes'
+                WHEN 3 THEN 'Martes'
+                WHEN 4 THEN 'Miércoles'
+                WHEN 5 THEN 'Jueves'
+                WHEN 6 THEN 'Viernes'
+                WHEN 7 THEN 'Sábado'
+            END AS day_name
+
+        FROM h_member_visits
+        WHERE id_member = ?
+
+        GROUP BY DATE(visit_date)
+
+        ORDER BY visit_date DESC
+    `, [id_member_backcup]);
+
+
+    //return rows;
+
+    const allRows = [...rows, ...rowsBackup];
+
+    return allRows;
 };

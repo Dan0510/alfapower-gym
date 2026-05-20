@@ -1,4 +1,4 @@
-const { getConnectionDB } = require("../../config/db/connection");
+const { getConnectionDB, getConnectionBackupDB } = require("../../config/db/connection");
 const MembersModel = require('../../models/members/members.model');
 const { getBucket  } = require('../../config/gcp/storage');
 const { sgMail, initMailer } = require('../../config/mail/mailer');
@@ -574,6 +574,7 @@ exports.getPaymentHistory = async (id_member) => {
 exports.getAccessDays = async (id_member) => {
 
     const db = await getConnectionDB();
+    const dbBackup = getConnectionBackupDB();
 
     if (!id_member) {
         throw new Error('id_member is required');
@@ -581,6 +582,7 @@ exports.getAccessDays = async (id_member) => {
 
     const data = await MembersModel.getAccessDays(
         db,
+        dbBackup,
         id_member
     );
 
