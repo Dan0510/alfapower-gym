@@ -175,7 +175,7 @@ exports.getPaymentHistory = async (db, id_member) => {
     const [rows] = await db.query(`
         SELECT
             p.id_payment,
-            p.payment_folio,
+            p.invoice AS payment_folio,
 
             m.id_membership,
             m.membership_name,
@@ -240,7 +240,7 @@ exports.getAccessDays = async (db, id_member) => {
 
     const [rows] = await db.query(`
         SELECT
-            DATE_FORMAT(al.access_datetime,'%d-%m-%Y') AS access_date,
+            DATE_FORMAT(al.access_datetime,'%d-%m-%Y %H:%i:%s') AS access_date,
 
             CASE DAYOFWEEK(al.access_datetime)
                 WHEN 1 THEN 'Domingo'
