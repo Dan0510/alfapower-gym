@@ -170,7 +170,7 @@ exports.deleteMember = async (db, id_member) => {
     `, [id_member]);
 };
 
-exports.getPaymentHistory = async (db, id_member) => {
+exports.getPaymentHistory = async (db, dbBackup, id_member) => {
 
     const [rows] = await db.query(`
         SELECT

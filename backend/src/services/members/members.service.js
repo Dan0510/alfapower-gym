@@ -134,10 +134,10 @@ exports.createMember = async (req) => {
             });
 
             // 2. Inicializar mailer (ideal moverlo fuera del request)
-            await initMailer();
+           // await initMailer();
 
             // 3. Enviar correo
-            await sgMail.send({
+            /*await sgMail.send({
                 to: email,
                 from: 'AlfaPower Gym <contacto@alfapowergym.com>',
                 subject: 'Tu código de acceso',
@@ -147,7 +147,7 @@ exports.createMember = async (req) => {
                     <p>Presenta este QR para acceder:</p>
                     <img src="${url}" width="200"/>
                 `
-            });
+            });*/
 
         } catch (err) {
             console.error("Error enviando correo:", err.response?.body || err.message);
@@ -554,6 +554,7 @@ exports.updateNextPaymentDate = async (req) => {
 exports.getPaymentHistory = async (id_member) => {
 
     const db = await getConnectionDB();
+    const dbBackup = await getConnectionBackupDB();
 
     if (!id_member) {
         throw new Error('id_member is required');
@@ -561,6 +562,7 @@ exports.getPaymentHistory = async (id_member) => {
 
     const payments = await MembersModel.getPaymentHistory(
         db,
+        dbBackup,
         id_member
     );
 
