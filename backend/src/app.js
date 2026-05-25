@@ -9,6 +9,7 @@ const corsOptions = {
       'http://localhost:8080',
       'https://alfapowergym.com',
       'https://admin.alfapowergym.com',
+      'https://service-alfapower-gym-frontend-182411964865.us-central1.run.app'
     ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
