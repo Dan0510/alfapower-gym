@@ -26,7 +26,7 @@ exports.getAvailable = async (db, data) => {
           AND m.status = 1
           AND (m.valid_from IS NULL OR m.valid_from <= ?)
           AND (m.valid_to IS NULL OR m.valid_to >= ?)
-          OR only_new_members = 2
+          
         
     `;
 
@@ -37,8 +37,10 @@ exports.getAvailable = async (db, data) => {
     ];
 
      if (data.only_new_members !== undefined) {
-        query += ` AND only_new_members = ? `;
+        query += ` AND (only_new_members = ?  OR only_new_members=2) `;
         params.push(Number(data.only_new_members));
+    }else{
+         query += ` only_new_members IN (0,2)`;
     }
 
     query += ` ORDER BY m.id_membership ASC`;
