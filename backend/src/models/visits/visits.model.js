@@ -268,31 +268,20 @@ exports.getVisitTypes = async (
 };
 
 exports.searchExternalVisitors = async (
-
     conn,
-
     search
-
 ) => {
 
     const [rows] = await conn.query(`
-
         SELECT
-
-            id_external_visitor,
-
-            full_name
-
+            id_external_visitor AS value,
+            full_name AS label,
+            email
         FROM cat_external_visitors
-
-        WHERE status=1
-
+        WHERE status = 1
         AND full_name LIKE ?
-
         ORDER BY full_name
-
         LIMIT 20
-
     `,[
         `%${search}%`
     ]);
@@ -300,6 +289,7 @@ exports.searchExternalVisitors = async (
     return rows;
 
 };
+
 
 exports.searchMembers = async (
     conn,
@@ -311,7 +301,8 @@ exports.searchMembers = async (
         SELECT
             id_member,
             membership_number,
-            CONCAT(first_name, ' ', first_surname) AS member_name
+            CONCAT(first_name, ' ', first_surname) AS member_name,
+            email
         FROM tb_members
         WHERE status = 1
     `;

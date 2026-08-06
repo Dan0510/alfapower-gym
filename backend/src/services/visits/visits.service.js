@@ -319,3 +319,35 @@ exports.searchMembers = async (req) => {
     }
 
 };
+
+
+exports.searchExternalVisitors = async (req) => {
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+
+    try {
+
+        const search = req.query.q || req.query.search || '';
+
+        const visitors = await VisitsModel.searchExternalVisitors(
+            conn,
+            search
+        );
+
+        return {
+            success: true,
+            data: visitors
+        };
+
+    } catch (error) {
+
+        throw error;
+
+    } finally {
+
+        conn.release();
+
+    }
+
+};
