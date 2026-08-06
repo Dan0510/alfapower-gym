@@ -10,11 +10,23 @@ router.post('/create-visit', VisitsController.createVisit);
 // Obtener todas las visitas
 router.get('/get-all-visits', VisitsController.getAllVisits);
 
-// Obtener una visita por ID
-router.get('/get-visit/:id_visit', VisitsController.getVisit);
+router.get(
+    '/get-visit-types',
+    VisitsController.getVisitTypes
+);
+
+router.get(
+    '/search-members',
+    VisitsController.searchMembers
+);
+
 
 // Cancelar una visita
 router.post('/cancel-visit', VisitsController.cancelVisit);
+
+// Obtener una visita por ID
+router.get('/get-visit/:id_visit', VisitsController.getVisit);
+
 
 // Historial de visitas de un socio
 router.get(
@@ -40,14 +52,5 @@ router.get(
     VisitsController.printVisitReceipt
 );
 
-router.get(
-    '/get-visit-types',
-    VisitsController.getVisitTypes
-);
-
-router.get(
-    '/search-members',
-    VisitsController.searchMembers
-);
 
 module.exports = router;
