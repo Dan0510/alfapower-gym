@@ -259,3 +259,30 @@ exports.getAllVisits = async (req) => {
     }
 
 };
+
+
+exports.getVisitTypes = async (req) => {
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+
+    try {
+
+        const visitTypes = await VisitsModel.getVisitTypes(conn);
+
+        return {
+            success: true,
+            data: visitTypes
+        };
+
+    } catch (error) {
+
+        throw error;
+
+    } finally {
+
+        conn.release();
+
+    }
+
+};
