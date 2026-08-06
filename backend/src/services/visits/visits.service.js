@@ -286,3 +286,36 @@ exports.getVisitTypes = async (req) => {
     }
 
 };
+
+exports.searchMembers = async (req) => {
+
+    const pool = await getConnectionDB();
+    const conn = await pool.getConnection();
+
+    try {
+
+        const search = req.query.q || req.query.search || '';
+        const idGymBranch = req.query.id_gym_branch || null;
+
+        const members = await VisitsModel.searchMembers(
+            conn,
+            search,
+            idGymBranch
+        );
+
+        return {
+            success: true,
+            data: members
+        };
+
+    } catch (error) {
+
+        throw error;
+
+    } finally {
+
+        conn.release();
+
+    }
+
+};

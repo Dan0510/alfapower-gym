@@ -302,64 +302,47 @@ exports.searchExternalVisitors = async (
 };
 
 exports.searchMembers = async (
-
     conn,
-
-    search
-
+    search,
+    idGymBranch
 ) => {
 
-    const [rows] = await conn.query(`
-
+    let sql = `
         SELECT
-
             id_member,
-
             membership_number,
-
-            CONCAT(
-
-                first_name,
-
-                ' ',
-
-                first_surname
-
-            ) member_name
-
+            CONCAT(first_name, ' ', first_surname) AS member_name
         FROM tb_members
+        WHERE status = 1
+    `;
 
-        WHERE status=1
+    const params = [];
 
-        AND(
+    if (idGymBranch) {
+        sql += ` AND id_gym_branch = ?`;
+        params.push(idGymBranch);
+    }
 
-            membership_number LIKE ?
+    if (search) {
+        sql += `
+            AND (
+                membership_number LIKE ?
+                OR CONCAT(first_name, ' ', first_surname) LIKE ?
+            )
+        `;
 
-            OR
+        params.push(`%${search}%`);
+        params.push(`%${search}%`);
+    }
 
-            CONCAT(
-
-                first_name,
-
-                ' ',
-
-                first_surname
-
-            ) LIKE ?
-
-        )
-
+    sql += `
         ORDER BY member_name
-
         LIMIT 20
+    `;
 
-    `,[
-        `%${search}%`,
-        `%${search}%`
-    ]);
+    const [rows] = await conn.query(sql, params);
 
     return rows;
-
 };
 
 exports.getOrCreateExternalVisitor = async (
