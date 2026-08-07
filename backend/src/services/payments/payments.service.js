@@ -389,7 +389,7 @@ for (const m of members) {
 
             // 📧 enviar correo
             if (emails.length) {
-                await sendReceiptEmail(emails, pdfBuffer, payment_folio);
+                //await sendReceiptEmail(emails, pdfBuffer, payment_folio);
             }
         }
 
@@ -680,7 +680,7 @@ exports.cancelPayment = async (req) => {
         const emails = members.map(m => m.email).filter(e => e);
 
         if (emails.length) {
-            await sendReceiptEmail(emails, pdfBuffer, payment.payment_folio + ' CANCELADO');
+            //await sendReceiptEmail(emails, pdfBuffer, payment.payment_folio + ' CANCELADO');
         }
 
         return {
@@ -991,7 +991,7 @@ exports.updatePayment = async (req) => {
             `, [filePath, id_payment]);
 
             if (emails.length) {
-                await sendReceiptEmail(emails, pdfBuffer, payment_folio);
+                //await sendReceiptEmail(emails, pdfBuffer, payment_folio);
             }
         }
 

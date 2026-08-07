@@ -89,7 +89,7 @@ exports.createVisit = async (req) => {
 
         if (req.body.send_mail) {
 
-            await sendReceiptEmail(req.body.email, pdfBuffer, req.body.folio);
+           // await sendReceiptEmail(req.body.email, pdfBuffer, req.body.folio);
         }
 
         await conn.commit();
