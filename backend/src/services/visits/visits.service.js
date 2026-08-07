@@ -69,7 +69,7 @@ exports.createVisit = async (req) => {
                             attended_by: req.body.name,
                             folio: req.body.folio,
                             //payment_method_name: payment_method_name,
-                            payment_type: payment_type,
+                            payment_type: req.body.visitor_type,
                              is_cancelled: false
                         });
 
