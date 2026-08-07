@@ -32,6 +32,29 @@ exports.findExternalVisitorByName = async (
 
 };
 
+exports.getMemberName = async (
+    conn,
+    id_member
+) => {
+
+    const [[member]] = await conn.query(`
+        SELECT CONCAT_WS(
+            ' ',
+            first_name,
+            first_surname,
+            membership_number
+        ) AS member_name
+        FROM tb_members
+        WHERE id_member = ?
+        LIMIT 1
+    `, [
+        id_member
+    ]);
+
+    return member ? member.member_name : null;
+
+};
+
 exports.createVisit = async (
     conn,
     visit

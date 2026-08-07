@@ -1,7 +1,9 @@
 const { getConnectionDB, getConnectionBackupDB } = require("../../config/db/connection");
 const VisitsModel = require('../../models/visits/visits.model');
-const { getBucket  } = require('../../config/gcp/storage');
-const { sgMail, initMailer } = require('../../config/mail/mailer');
+const { generateReceiptPdf } = require('../../utils/generateReceiptPdf');
+const { uploadReceipt } = require('../../utils/uploadToStorage');
+const { sendReceiptEmail } = require('../../utils/sendEmail');
+
 
 exports.createVisit = async (req) => {
 
@@ -34,26 +36,60 @@ exports.createVisit = async (req) => {
             req.body.payment_methods
         );
 
-        const receipt = await generateReceiptPdf(
+        /*const receipt = await generateReceiptPdf(
             conn,
             idVisit
-        );
+        );*/
+       let name_visit = '';
 
-        await uploadReceiptFile(
-            conn,
-            idVisit,
-            receipt,
-            folio
-        );
+        if (req.body.visitor_type === 'MEMBER') {
+
+            name_visit = await VisitsModel.getMemberName(
+                conn,
+                req.body.id_member
+            );
+
+        } else {
+
+            name_visit = req.body.full_name.trim();
+
+        }
+
+
+         
+        const pdfBuffer = await generateReceiptPdf({
+                            date: new Date().toLocaleDateString(),
+                            total: req.body.total_amount,
+                            discount: req.body.discount_amount,
+                            members: name_visit,
+                            concept: "VISITA",
+                            payment_methods: req.body.payment_methods,
+                            next_payment_date: 'NO APLICA',
+                            status: req.body.paymentStatus,
+                            attended_by: req.body.name,
+                            folio: req.body.folio,
+                            //payment_method_name: payment_method_name,
+                            payment_type: payment_type,
+                             is_cancelled: false
+                        });
+
+        const now = new Date();
+
+        const timestamp = now
+            .toISOString()
+            .replace(/[-:]/g, '')
+            .replace('T', '_')
+            .split('.')[0];
+
+        const fileName = `${req.body.folio}_${timestamp}.pdf`;
+
+        const filePath = await uploadReceipt(pdfBuffer, fileName);
+        
+        await updateReceiptPath(conn, idVisit, pdfBuffer );
 
         if (req.body.send_mail) {
 
-            await sendReceipt(
-                conn,
-                idVisit,
-                receipt
-            );
-
+            await sendReceiptEmail(req.body.email, pdfBuffer, req.body.folio);
         }
 
         await conn.commit();
