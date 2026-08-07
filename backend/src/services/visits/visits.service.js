@@ -85,7 +85,7 @@ exports.createVisit = async (req) => {
 
         const filePath = await uploadReceipt(pdfBuffer, fileName);
         
-        await updateReceiptPath(conn, idVisit, pdfBuffer );
+        await VisitsModel.updateReceiptPath(conn, idVisit, pdfBuffer );
 
         if (req.body.send_mail) {
 
