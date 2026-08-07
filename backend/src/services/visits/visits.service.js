@@ -97,7 +97,7 @@ exports.createVisit = async (req) => {
         return {
             success: true,
             id_visit: idVisit,
-            visit_folio: folio
+            visit_folio: req.body.folio
         };
 
     } catch (error) {
