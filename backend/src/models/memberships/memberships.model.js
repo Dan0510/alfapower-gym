@@ -118,7 +118,7 @@ WHERE m.id_gym_branch = ?
                             m.exclusive_from_date,
                             '%Y-%m-01'
                         ),
-                        INTERVAL m.required_consecutive_months MONTH
+                        INTERVAL 6 MONTH
                   )
 
                 GROUP BY rpm.id_member
