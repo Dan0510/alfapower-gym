@@ -1,4 +1,4 @@
-exports.getAvailable = async (db, data) => {
+/*exports.getAvailable = async (db, data) => {
 
    let query = `
         SELECT 
@@ -48,8 +48,126 @@ exports.getAvailable = async (db, data) => {
     const [rows] = await db.query(query, params);
 
     return rows;
-};
+};*/
 
+exports.getAvailable = async (db, data) => {
+
+    let query = `
+        SELECT 
+            m.id_membership,
+            m.id_gym_branch,
+            m.membership_name,
+            m.description,
+            m.duration_value,
+            m.id_unit_measurement,
+            m.price,
+            m.quantity_members,
+            m.access_limit_per_day,
+            m.allow_freeze,
+            m.max_freeze_days,
+            m.max_members,
+            m.only_new_members,
+            m.valid_from,
+            m.valid_to,
+            m.status,
+            m.is_exclusive,
+            m.required_consecutive_months,
+            m.exclusive_from_date,
+            u.unit_measurement
+
+        FROM cat_memberships m
+
+        INNER JOIN cat_unit_measurement u
+            ON u.id_unit_measurement = m.id_unit_measurement
+
+        WHERE m.id_gym_branch = ?
+          AND m.status = 1
+
+          AND (m.valid_from IS NULL OR m.valid_from <= ?)
+          AND (m.valid_to IS NULL OR m.valid_to >= ?)
+
+          /* Membresías normales o exclusivas que cumpla el socio */
+          AND (
+                m.is_exclusive = 0
+
+                OR
+
+                (
+                    m.is_exclusive = 1
+                    AND ? IS NOT NULL
+                    AND m.required_consecutive_months > 0
+                    AND m.exclusive_from_date IS NOT NULL
+
+                    AND EXISTS (
+                        SELECT 1
+                        FROM rel_payment_members rpm
+
+                        INNER JOIN tb_member_payments p
+                            ON p.id_payment = rpm.id_payment
+
+                        WHERE rpm.id_member = ?
+
+                          AND p.payment_status = 'PAGADO'
+
+                          AND p.payment_date >= DATE_FORMAT(
+                                m.exclusive_from_date,
+                                '%Y-%m-01'
+                          )
+
+                          AND p.payment_date < DATE_ADD(
+                                DATE_FORMAT(
+                                    m.exclusive_from_date,
+                                    '%Y-%m-01'
+                                ),
+                                INTERVAL m.required_consecutive_months MONTH
+                          )
+
+                        GROUP BY rpm.id_member
+
+                        HAVING COUNT(
+                            DISTINCT DATE_FORMAT(p.payment_date, '%Y-%m')
+                        ) = m.required_consecutive_months
+                    )
+                )
+          )
+    `;
+
+    const params = [
+        data.id_gym_branch,
+        data.today,
+        data.today,
+        data.id_member ?? null,
+        data.id_member ?? null
+    ];
+
+    // Filtro de membresías para nuevos o actuales socios
+    if (data.only_new_members !== undefined) {
+
+        query += `
+            AND (
+                m.only_new_members = ?
+                OR m.only_new_members = 2
+            )
+        `;
+
+        params.push(Number(data.only_new_members));
+
+    } else {
+
+        query += `
+            AND m.only_new_members IN (0, 2)
+        `;
+
+    }
+
+    query += `
+        ORDER BY m.id_membership ASC
+    `;
+
+    const [rows] = await db.query(query, params);
+
+    return rows;
+};
 
 exports.create = async (db, data) => {
     const [result] = await db.query(`

@@ -9,6 +9,7 @@ exports.getAvailable = async (filters) => {
     
     const memberships = await MembershipsModel.getAvailable(db, {
         id_gym_branch: filters.id_gym_branch,
+        id_member: filters.id_member ?? 0,
         only_new_members: filters.only_new_members,
         today
     });
