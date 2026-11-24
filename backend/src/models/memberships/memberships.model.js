@@ -163,7 +163,7 @@ WHERE m.id_gym_branch = ?
           AND (m.valid_from IS NULL OR m.valid_from <= ?)
           AND (m.valid_to IS NULL OR m.valid_to >= ?)
 
-          /* Membresías normales o exclusivas que cumpla el socio */
+         
           AND (
                 m.is_exclusive = 0
 
