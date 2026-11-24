@@ -126,7 +126,7 @@ exports.getAvailable = async (db, data) => {
 
                         HAVING COUNT(
                             DISTINCT DATE_FORMAT(p.payment_date, '%Y-%m')
-                        ) = m.required_consecutive_months
+                        ) >= m.required_consecutive_months
                     )
                 )
           )
