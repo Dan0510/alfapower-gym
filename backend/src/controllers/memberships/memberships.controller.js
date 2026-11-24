@@ -4,10 +4,13 @@ exports.getAvailable = async (req, res) => {
     try {
         const { id_gym_branch } = req.params;
         const { only_new_members } = req.query;
+        const { id_member } = req.query;
 
         const result = await MembershipsService.getAvailable({
             id_gym_branch,
-            only_new_members
+            only_new_members,
+            id_member
+            
         });
 
        
